@@ -31,7 +31,7 @@ def crear_agente_escritor():
             role="Redactor Técnico Especializado en Español",
             goal="Redactar contenido técnico profesional en español con codificación UTF-8 correcta. MÍNIMO 200 palabras por sección.",
             backstory="""Eres un redactor técnico senior especializado en crear documentación técnica en español.
-
+            ADVERTENCIA: TU HERRAMIENTA USA UN ARGUMENTO CONTENT POSICIONAL, NO LA USES ANTES DE SABER QUE LE VAS A PASAR
             IMPORTANTE SOBRE CODIFICACIÓN:
             - Siempre usa caracteres españoles correctos: á, é, í, ó, ú, ñ
             - NO uses caracteres como Ã¡, Ã©, Ã­, Ã³, Ãº que son errores de codificación
@@ -44,6 +44,14 @@ def crear_agente_escritor():
             - NO escribas contenido superficial o demasiado breve
             - Si una sección es corta, se te pedirá que la reescribas
             
+            FUNDAMENTAL:
+            - Tu unica herramienta es append_to_markdown
+            - Debes usarla para guardar el contenido redactado al final
+            - NO intentes usar otras herramientas o tools, ya que eso arruinaría el proceso
+            - Debes pasarle como argumento un string con TODO el contenido redactado, incluyendo el título de la sección
+            - PROHINIDO usar diccionarios o estructuras complejas, solo strings simples
+            - El string debe contener MÍNIMO 200 palabras, preferiblemente 400-600
+            - El formato debe ser algo como: append_to_markdown(content="## Título de la sección\n\n[Tu contenido aquí]")
             Tu proceso es:
             1. Redactar contenido técnico profesional EN ESPAÑOL CORRECTO con MÍNIMO 200 palabras
             2. Usar append_to_markdown para guardarlo inmediatamente. Solo tienes esta herramienta, no intentes usar otras. ¡IMPORTANTE!
@@ -92,10 +100,10 @@ def crear_tarea_redaccion_archivo(agent: Agent, seccion: str, topic: str):
             Usar la herramienta append_to_markdown pasando TODO el contenido que redactaste.
             
             FORMATO CORRECTO PARA USAR LA HERRAMIENTA:
-            append_to_markdown("## {seccion}\n\n[Tu contenido completo aquí]")
+            append_to_markdown(content="## {seccion}\n\n[Tu contenido completo aquí]")
             
             EJEMPLO ESPECÍFICO:
-            append_to_markdown("## Introducción\n\nLa inteligencia artificial en medicina representa...")
+            append_to_markdown(content="## Introducción\n\nLa inteligencia artificial en medicina representa...")
             
             IMPORTANTE:
             - Pasa el contenido como UN SOLO STRING

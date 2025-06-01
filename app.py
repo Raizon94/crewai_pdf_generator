@@ -12,15 +12,28 @@ st.title("📄 Generador de PDF CrewAI")
 # CSS para aclarar el botón de descarga
 st.markdown("""
 <style>
-    /* Apuntar específicamente al botón de descarga de Streamlit */
     div[data-testid="stDownloadButton"] > button {
-        background-color: #4CAF50; /* Un verde más claro y amigable */
-        color: white; /* Texto blanco para contraste */
-        border: 1px solid #4CAF50; /* Borde del mismo color */
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border: 1px solid #4CAF50 !important;
+        opacity: 1 !important;
+        filter: brightness(105%) contrast(110%) saturate(120%) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease;
     }
+
     div[data-testid="stDownloadButton"] > button:hover {
-        background-color: #45a049; /* Un poco más oscuro al pasar el mouse */
-        border: 1px solid #45a049;
+        filter: brightness(125%) contrast(120%) !important;
+        border-color: #45a049 !important;
+    }
+
+    div[data-testid="stDownloadButton"] > button:disabled {
+        background-color: #999999 !important;
+        border-color: #999999 !important;
+        color: #ffffff !important;
+        filter: none !important;
+        opacity: 0.6 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -50,7 +63,7 @@ campos_disabled = st.session_state['generando']
 
 # Formulario SIEMPRE visible, lógica de generación fuera
 modelo = st.selectbox("Selecciona el modelo LLM", modelos, key="modelo_llm", disabled=campos_disabled)
-topic = st.text_input("Tópico del documento", value="Inteligencia Artificial en la Medicina", key="topic_input", disabled=campos_disabled)
+topic = st.text_input("Tópico del documento", value="Arquitectura Transformer en los LLM", key="topic_input", disabled=campos_disabled)
 submit = st.button("Generar PDF", use_container_width=True, disabled=campos_disabled)
 
 if submit and not st.session_state['generando']:

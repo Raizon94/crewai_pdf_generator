@@ -6,8 +6,10 @@ import json
 import re
 import codecs
 from crewai.tools import tool
+from pydantic import BaseModel, Field
 
-@tool 
+    
+@tool("append_to_markdown")
 def append_to_markdown(content: str) -> str:
     """
     Herramienta para añadir contenido markdown al final del archivo temp/temp_markdown.md.
