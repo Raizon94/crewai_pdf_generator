@@ -26,7 +26,9 @@ Antes de ejecutar la aplicación, asegúrate de tener Python instalado (preferib
 
     El archivo `requirements.txt` también puede incluir `crewai[llm]`, `crewai[tools]`, y `crewai[integrations]` para asegurar que se instalen todas las extras necesarias para el funcionamiento completo de CrewAI con LLMs locales y sus herramientas.
 
-3.  **Configura Ollama:**
+3.  **Configura Ollama:***
+
+    **Nota:** Aunque el proyecto está optimizado para `gemma3:4b`, también se ha comprobado que `gemma3:1b` funciona muy bien e incluso, en muchas ocasiones, supera los resultados obtenidos con `gemma3:4b`. Por lo tanto, puedes utilizar con confianza `gemma3:1b` como alternativa.
     *   Asegúrate de tener Ollama instalado y ejecutándose en tu sistema. Puedes descargarlo desde [ollama.com](https://ollama.com/).
     *   Descarga al menos un modelo de lenguaje. **EL PROYECTO ESTÁ OPTIMIZADO Y UTILIZA PRINCIPALMENTE EL MODELO `gemma3:4b`**. Puedes usar otros, pero este es el recomendado. Para descargar `gemma3:4b`, ejecuta en tu terminal:
         ```bash
@@ -34,7 +36,7 @@ Antes de ejecutar la aplicación, asegúrate de tener Python instalado (preferib
         ```
     *   Verifica que el servidor de Ollama esté accesible en `http://localhost:11434`.
 
-4.  **API Key de Serper:**
+5.  **API Key de Serper:**
     *   El proyecto utiliza una API key de [Serper](https://serper.dev) para la funcionalidad de búsqueda web.
     *   Crea un archivo llamado `.env` en la raíz del proyecto.
     *   Añade tu API key de Serper al archivo `.env` de la siguiente manera:
