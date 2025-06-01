@@ -293,5 +293,3 @@ La carpeta `utils/` contiene scripts con funciones de ayuda y configuración par
         *   Si no, y la lista no está vacía, elige un modelo al azar de los disponibles y muestra una advertencia.
         *   Si no hay modelos instalados, lanza un `RuntimeError`.
     *   **Uso Principal:** Utilizado por `llm_provider.py` para determinar qué modelo configurar si no se especifica uno explícitamente. También es usado en `app.py` para poblar el selector de modelos en la interfaz de Streamlit.
-
-Con esto, hemos cubierto los principales componentes del proyecto. ¿Hay algo más que quieras que detalle o alguna sección específica del `README.md` que quieras mejorar o añadir?
