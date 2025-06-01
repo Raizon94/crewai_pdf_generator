@@ -34,7 +34,7 @@ Antes de ejecutar la aplicación, asegúrate de tener Python instalado (preferib
         ```
     *   Verifica que el servidor de Ollama esté accesible en `http://localhost:11434`.
 
-4.  **API Key de Serper (Opcional pero Recomendado para Búsqueda Web):**
+4.  **API Key de Serper:**
     *   El proyecto utiliza una API key de [Serper](https://serper.dev) para la funcionalidad de búsqueda web.
     *   Crea un archivo llamado `.env` en la raíz del proyecto.
     *   Añade tu API key de Serper al archivo `.env` de la siguiente manera:
