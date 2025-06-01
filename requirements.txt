@@ -1,0 +1,14 @@
+crewai
+crewai-tools
+crewai[llm]
+ollama
+streamlit
+requests
+markdown
+Markdown
+weasyprint
+crewai[tools]
+crewai[integrations]
+google-search-results
+python-dotenv
+
