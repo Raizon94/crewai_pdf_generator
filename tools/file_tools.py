@@ -6,8 +6,6 @@ import json
 import re
 import codecs
 from crewai.tools import tool
-from pydantic import BaseModel, Field
-
     
 @tool("append_to_markdown")
 def append_to_markdown(content: str) -> str:
