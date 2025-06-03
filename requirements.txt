@@ -11,4 +11,5 @@ crewai[tools]
 crewai[integrations]
 google-search-results
 python-dotenv
+graphviz
 
