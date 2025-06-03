@@ -9,31 +9,41 @@ import sys
 st.set_page_config(page_title="Generador de PDF CrewAI", layout="centered")
 st.title("📄 Generador de PDF CrewAI")
 
-# CSS para aclarar el botón de descarga
+# CSS para aclarar el botón de descarga y el mensaje de éxito
 st.markdown("""
 <style>
     div[data-testid="stDownloadButton"] > button {
         background-color: #4CAF50 !important;
         color: white !important;
-        border: 1px solid #4CAF50 !important;
+        border: 1.5px solid #388e3c !important;
         opacity: 1 !important;
-        filter: brightness(105%) contrast(110%) saturate(120%) !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+        filter: none !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
         font-weight: bold !important;
+        font-size: 1.1em !important;
         transition: all 0.3s ease;
     }
-
     div[data-testid="stDownloadButton"] > button:hover {
-        filter: brightness(125%) contrast(120%) !important;
-        border-color: #45a049 !important;
+        background-color: #388e3c !important;
+        border-color: #2e7031 !important;
+        filter: brightness(110%) !important;
     }
-
     div[data-testid="stDownloadButton"] > button:disabled {
-        background-color: #999999 !important;
-        border-color: #999999 !important;
+        background-color: #cccccc !important;
+        border-color: #cccccc !important;
         color: #ffffff !important;
         filter: none !important;
         opacity: 0.6 !important;
+    }
+    /* Mensaje de éxito personalizado */
+    .stAlert-success {
+        background-color: #e6ffe6 !important;
+        border: 2px solid #4CAF50 !important;
+        color: #256029 !important;
+        font-weight: bold !important;
+        font-size: 1.08em !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(76, 175, 80, 0.08) !important;
     }
 </style>
 """, unsafe_allow_html=True)

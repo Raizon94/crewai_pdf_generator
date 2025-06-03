@@ -6,6 +6,7 @@ import json
 import re
 import codecs
 from crewai.tools import tool
+from pathlib import Path
     
 @tool("append_to_markdown")
 def append_to_markdown(content: str) -> str:
@@ -70,10 +71,12 @@ def append_to_markdown(content: str) -> str:
         return f" Error: Contenido muy corto o vacío. Recibido: '{content[:100]}...'"
     
     # Asegurar codificación correcta al escribir
-    file_path = "temp/temp_markdown.md"
+    temp_dir = os.path.join("temp")
+    file_path = os.path.join(temp_dir, "temp_markdown.md")
+    file_path = str(Path(file_path).expanduser().resolve())
     
     try:
-        os.makedirs("temp", exist_ok=True)
+        os.makedirs(temp_dir, exist_ok=True)
         
         # Escribir con codificación UTF-8 explícita y BOM
         with codecs.open(file_path, 'a', encoding='utf-8-sig') as f:

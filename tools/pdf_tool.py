@@ -8,9 +8,12 @@ from crewai.tools import tool
 # Añadir el directorio padre al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Detectar separador de sistema operativo y función para rutas multiplataforma
+from pathlib import Path
+
 # ==================== FUNCIÓN BASE (para testing) ====================
 
-def _generar_pdf_base(markdown_content: str, imagen_portada: str = None, output_pdf_path: str = "temp/final_documento.pdf") -> str:
+def _generar_pdf_base(markdown_content: str, imagen_portada: str = None, output_pdf_path: str = os.path.join("temp", "final_documento.pdf")) -> str:
     """Función base para generar PDF (sin decorador @tool)"""
     try:
         # Importar dependencias necesarias
@@ -22,19 +25,29 @@ def _generar_pdf_base(markdown_content: str, imagen_portada: str = None, output_
             print("Instala con: pip install weasyprint markdown")
             return ""
         
+        # Normalizar rutas multiplataforma
+        def normpath(p):
+            if p:
+                return str(Path(p).expanduser().resolve())
+            return p
+        
+        imagen_portada = normpath(imagen_portada) if imagen_portada else None
+        output_pdf_path = normpath(output_pdf_path)
+        
         # Verificar y usar imagen de portada por defecto si existe
         if not imagen_portada or not os.path.exists(imagen_portada):
             # Buscar imagen de portada en ubicaciones comunes
             imagenes_posibles = [
-                "temp/temp_image.jpg",
-                "temp/temp_image.png", 
-                "temp/temp_image.jpeg",
+                os.path.join("temp", "temp_image.jpg"),
+                os.path.join("temp", "temp_image.png"),
+                os.path.join("temp", "temp_image.jpeg"),
                 "portada.jpg",
                 "portada.png"
             ]
             
             imagen_portada = None
             for img_path in imagenes_posibles:
+                img_path = normpath(img_path)
                 if os.path.exists(img_path):
                     imagen_portada = img_path
                     print(f"Usando imagen de portada encontrada: {img_path}")
@@ -323,7 +336,7 @@ def _generar_pdf_base(markdown_content: str, imagen_portada: str = None, output_
 # ==================== HERRAMIENTA PARA AGENTES ====================
 
 @tool("GeneradorPDF")
-def generar_pdf_desde_markdown(markdown_content: str, imagen_portada: str = "temp/temp_image.jpg", output_pdf_path: str = "temp/final_documento.pdf") -> str:
+def generar_pdf_desde_markdown(markdown_content: str, imagen_portada: str = os.path.join("temp", "temp_image.jpg"), output_pdf_path: str = os.path.join("temp", "final_documento.pdf")) -> str:
     """Convierte contenido markdown a PDF usando WeasyPrint.
     
     Args:
@@ -376,8 +389,8 @@ Este es un **documento de prueba** para verificar que la generación de PDF func
 ## Código de ejemplo
 
 def hello_world():
-print("¡Hola desde Python!")
-return True
+    print("¡Hola desde Python!")
+    return True
 
 ## Tabla de ejemplo
 
@@ -408,8 +421,9 @@ Este documento demuestra las capacidades de conversión de Markdown a PDF.
         
         imagen_encontrada = None
         for img in imagenes_posibles:
-            if os.path.exists(img):
-                imagen_encontrada = img
+            img_path = str(Path(img).expanduser().resolve())
+            if os.path.exists(img_path):
+                imagen_encontrada = img_path
                 break
         
         if imagen_encontrada:
