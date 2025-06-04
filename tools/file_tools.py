@@ -21,100 +21,129 @@ def append_to_markdown(content: str) -> str:
     """
     # Debug: Imprimir el tipo y contenido recibido
     print(f"[DEBUG] Tipo recibido: {type(content)}")
-    print(f"[DEBUG] Primeros 200 chars: {str(content)[:200]}...")
+    print(f"[DEBUG] Longitud total: {len(str(content))} chars")
+    print(f"[DEBUG] Primeros 300 chars: {str(content)[:300]}...")
+    print(f"[DEBUG] Últimos 100 chars: ...{str(content)[-100:]}")
     
     original_content = content
-    
-    # Manejar caso donde se recibe un diccionario en lugar de string
-    if isinstance(content, dict):
-        print("[DEBUG] Recibido diccionario, intentando extraer contenido...")
-        # Buscar claves comunes que podrían contener el contenido
-        for key in ['content', 'text', 'markdown', 'description', 'value']:
-            if key in content and isinstance(content[key], str):
-                content = content[key]
-                break
-        else:
-            # Si no se encuentra, convertir todo el diccionario a string
-            content = str(content)
     
     # Convertir a string si no lo es
     if not isinstance(content, str):
         content = str(content)
     
-    # Decodificar escapes Unicode ANTES de procesar JSON
-    if isinstance(content, str) and '\\u' in content:
+    # Decodificar escapes Unicode ANTES de cualquier procesamiento
+    if '\\u' in content:
         try:
-            # Primero intentar decodificar los escapes Unicode
             content = content.encode('utf-8').decode('unicode_escape')
-            print(f"[DEBUG] Después de decodificar Unicode: {content[:200]}...")
+            print(f"[DEBUG] Después de decodificar Unicode: {len(content)} chars")
         except Exception as e:
-            print(f"[DEBUG] Error decodificando Unicode (método 1): {e}")
+            print(f"[DEBUG] Error decodificando Unicode: {e}")
+    
+    # NUEVO: Detectar si contiene estructura tipo JSON (aunque esté malformada)
+    if content.strip().startswith('{') or '"content":' in content:
+        print("[DEBUG] Detectado formato JSON/cuasi-JSON, procesando...")
+        
+        # Método 1: Intentar JSON válido primero
+        json_processed = False
+        if content.strip().startswith('{') and content.strip().endswith('}'):
             try:
-                # Método alternativo para decodificar Unicode
-                content = codecs.decode(content, 'unicode_escape')
-                print(f"[DEBUG] Después de decodificar Unicode (método 2): {content[:200]}...")
-            except Exception as e2:
-                print(f"[DEBUG] Error decodificando Unicode (método 2): {e2}")
-    
-    # Extraer contenido si es JSON - DESPUÉS de decodificar Unicode
-    if isinstance(content, str) and content.strip().startswith('{') and content.strip().endswith('}'):
-        try:
-            print("[DEBUG] Intentando parsear como JSON...")
-            data = json.loads(content)
-            
-            if isinstance(data, dict):
-                # Buscar todas las claves que contengan texto largo
-                all_texts = []
-                
-                def extract_text_recursively(obj, key_path=""):
-                    """Extraer texto recursivamente de un objeto JSON"""
-                    if isinstance(obj, dict):
-                        for key, value in obj.items():
-                            new_path = f"{key_path}.{key}" if key_path else key
-                            extract_text_recursively(value, new_path)
-                    elif isinstance(obj, str) and len(obj.strip()) > 10:
-                        print(f"[DEBUG] Texto encontrado en {key_path}: {len(obj)} chars")
-                        all_texts.append(obj)
-                    elif isinstance(obj, list):
-                        for i, item in enumerate(obj):
-                            extract_text_recursively(item, f"{key_path}[{i}]")
-                
-                extract_text_recursively(data)
-                
-                if all_texts:
-                    # Unir todos los textos encontrados
-                    content = '\n\n'.join(all_texts)
-                    print(f"[DEBUG] Textos combinados: {len(content)} chars total")
-                else:
-                    # Si no se encuentra texto, usar el JSON completo como string
-                    content = str(data)
+                data = json.loads(content)
+                if isinstance(data, dict):
+                    all_texts = []
                     
-        except json.JSONDecodeError as e:
-            print(f"[DEBUG] Error parseando JSON: {e}")
-            # Si no es JSON válido, usar el contenido tal como está
-        except Exception as e:
-            print(f"[DEBUG] Error procesando JSON: {e}")
+                    def extract_all_text(obj):
+                        if isinstance(obj, dict):
+                            for key, value in obj.items():
+                                extract_all_text(value)
+                        elif isinstance(obj, list):
+                            for item in obj:
+                                extract_all_text(item)
+                        elif isinstance(obj, str) and len(obj.strip()) > 10:
+                            all_texts.append(obj.strip())
+                    
+                    extract_all_text(data)
+                    
+                    if all_texts:
+                        content = '\n\n'.join(all_texts)
+                        json_processed = True
+                        print(f"[DEBUG] JSON válido procesado: {len(content)} chars")
+                        
+            except json.JSONDecodeError as e:
+                print(f"[DEBUG] JSON inválido: {e}")
+        
+        # Método 2: Procesar JSON malformado con regex
+        if not json_processed:
+            print("[DEBUG] Procesando JSON malformado con regex...")
+            
+            # Extraer todos los valores entre comillas después de ":"
+            # Patrón mejorado para capturar valores largos
+            pattern = r':\s*"([^"]*(?:\\.[^"]*)*)"'
+            matches = re.findall(pattern, content)
+            
+            if matches:
+                extracted_texts = []
+                for match in matches:
+                    # Decodificar escapes en cada match
+                    clean_text = match.replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                    if len(clean_text.strip()) > 20:  # Solo textos significativos
+                        extracted_texts.append(clean_text.strip())
+                        print(f"[DEBUG] Texto extraído: {len(clean_text)} chars - {clean_text[:50]}...")
+                
+                if extracted_texts:
+                    content = '\n\n'.join(extracted_texts)
+                    print(f"[DEBUG] Regex procesado: {len(content)} chars de {len(extracted_texts)} fragmentos")
+                    json_processed = True
+            
+            # Método 3: Si regex no funciona, extraer manualmente
+            if not json_processed:
+                print("[DEBUG] Usando extracción manual...")
+                
+                # Buscar el patrón {"content": "texto"
+                content_match = re.search(r'"content":\s*"([^"]*(?:\\.[^"]*)*)"', content)
+                if content_match:
+                    main_content = content_match.group(1)
+                    
+                    # Buscar más contenido después
+                    remaining = content[content_match.end():]
+                    additional_matches = re.findall(r':\s*"([^"]*(?:\\.[^"]*)*)"', remaining)
+                    
+                    all_parts = [main_content]
+                    for match in additional_matches:
+                        if len(match.strip()) > 20:
+                            all_parts.append(match)
+                    
+                    # Limpiar y combinar
+                    cleaned_parts = []
+                    for part in all_parts:
+                        clean_part = part.replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                        if len(clean_part.strip()) > 10:
+                            cleaned_parts.append(clean_part.strip())
+                    
+                    if cleaned_parts:
+                        content = '\n\n'.join(cleaned_parts)
+                        print(f"[DEBUG] Extracción manual: {len(content)} chars de {len(cleaned_parts)} partes")
+                        json_processed = True
+        
+        if not json_processed:
+            print("[DEBUG] No se pudo procesar como JSON, usando contenido original")
     
-    # Limpiar caracteres problemáticos que pueden quedar
+    # Limpiar caracteres problemáticos que puedan quedar
     if isinstance(content, str):
-        # Reemplazar comillas problemáticas
         content = content.replace('\\"', '"')
         content = content.replace('\\n', '\n')
         content = content.replace('\\t', '\t')
-        
-        # Limpiar espacios y saltos de línea excesivos
-        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
+        content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)
         content = content.strip()
     
     # Verificar que tenemos contenido válido
     if not content or len(content) < 10:
-        print(f"[DEBUG] Contenido muy corto. Original: {original_content[:500]}...")
+        print(f"[DEBUG] Contenido muy corto. Original completo: {original_content}")
         return f"❌ Error: Contenido muy corto o vacío. Recibido: '{content[:100]}...'"
     
     print(f"[DEBUG] Contenido final a escribir: {len(content)} chars")
-    print(f"[DEBUG] Primeras líneas del contenido final:\n{content[:300]}...")
+    print(f"[DEBUG] Primeras líneas del contenido final:\n{content[:400]}...")
     
-    # Asegurar codificación correcta al escribir
+    # Escribir archivo
     temp_dir = os.path.join("temp")
     file_path = os.path.join(temp_dir, "temp_markdown.md")
     file_path = str(Path(file_path).expanduser().resolve())
@@ -122,19 +151,19 @@ def append_to_markdown(content: str) -> str:
     try:
         os.makedirs(temp_dir, exist_ok=True)
         
-        # Escribir con codificación UTF-8 explícita
         with codecs.open(file_path, 'a', encoding='utf-8') as f:
             f.write(f"\n\n{content}\n\n")
         
-        # Verificar estadísticas del contenido añadido
+        # Calcular estadísticas
         added_words = len(content.split())
         added_lines = len(content.splitlines())
         
-        # Verificar estadísticas totales del archivo
         with codecs.open(file_path, 'r', encoding='utf-8') as f:
             full_content = f.read()
             total_words = len(full_content.split())
             total_lines = len(full_content.splitlines())
+        
+        print(f"[DEBUG] Estadísticas reales - Añadido: {added_words} palabras")
         
         return f"✅ Contenido añadido exitosamente. Añadido: {added_words} palabras, {added_lines} líneas. Total: {total_words} palabras, {total_lines} líneas."
         
