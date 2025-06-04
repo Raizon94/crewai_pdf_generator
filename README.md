@@ -11,7 +11,6 @@ Aplicación web construida con **Streamlit** que utiliza **CrewAI** y modelos de
 ### Prerrequisitos
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado
 - [Ollama](https://ollama.com/) ejecutándose en tu máquina host
-- (Sólo en Windows) [Bundle de dependencias GTK](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer) instalado
 
 ### 1. Configurar Ollama (en tu máquina, no en Docker)
 ```bash
@@ -27,7 +26,7 @@ ollama pull gemma3:1b
 ### 2. Configurar el proyecto
 ```bash
 # Clonar el repositorio
-git clone <tu-repositorio>
+git clone *link a nuestro repo*
 cd crewai_pdf_generator
 
 # Crear archivo de configuración
@@ -260,12 +259,5 @@ graph TD
 | `seleccionar_llm()` | Auto-selecciona mejor modelo disponible | `utils/llm_selector.py` |
 
 ---
-
-## 📞 Soporte y Contribución
-
-- 📖 **Documentación completa**: [DOCKER_README.md](DOCKER_README.md)
-- 🐛 **Reportar problemas**: Crear issue en el repositorio
-- 💡 **Mejoras**: Pull requests bienvenidos
-- 📧 **Contacto**: William Atef Tadrous y Julián Cussianovich
 
 **¡Listo para generar PDFs con IA! 🚀**
