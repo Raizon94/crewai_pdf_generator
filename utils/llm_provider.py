@@ -17,10 +17,18 @@ def crear_llm_crewai(modelo_seleccionado=None):
         print(f"[INFO] Configurando LLM optimizado: {modelo_seleccionado}")
         from crewai import LLM
         
+        # Detectar si estamos en Docker o local
+        ollama_host = os.getenv('OLLAMA_HOST', 'localhost:11434')
+        if not ollama_host.startswith('http'):
+            ollama_host = f"http://{ollama_host}"
+        base_url = f"{ollama_host}/v1"
+        
+        print(f"[INFO] Conectando a Ollama en: {base_url}")
+        
         # Configuración optimizada para respuestas largas
         llm = LLM(
             model=f"openai/{modelo_seleccionado}",
-            base_url="http://localhost:11434/v1",
+            base_url=base_url,
             api_key="ollama",
             # CONFIGURACIÓN ANTI-TRUNCAMIENTO
             max_tokens=4096,  # Máximo permitido para respuestas largas

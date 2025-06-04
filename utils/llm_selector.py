@@ -24,13 +24,28 @@ def obtener_modelos_disponibles_ollama():
     instalados localmente. Devuelve una lista de cadenas con los nombres de los modelos.
     """
     try:
-        modelos_info = ollama.list()
+        # Configurar host de Ollama (Docker o local)
+        import os
+        ollama_host = os.getenv('OLLAMA_HOST', 'localhost:11434')
+        if ollama_host.startswith('http'):
+            ollama_host = ollama_host.replace('http://', '').replace('https://', '')
+        
+        # Separar host y puerto
+        if ':' in ollama_host:
+            host, port = ollama_host.split(':')
+        else:
+            host, port = ollama_host, '11434'
+        
+        # Configurar cliente con host personalizado
+        client = ollama.Client(host=f'http://{host}:{port}')
+        modelos_info = client.list()
+        
         # La respuesta tiene un atributo 'models' que contiene una lista de objetos Model
         modelos = [m.model for m in modelos_info.models]
         return modelos
     except Exception as e:
         # Puede fallar si el demonio no está corriendo o hay otro problema de conexión
-        print(f"[ERROR] No se pudo conectar al servidor de Ollama: {e}", file=sys.stderr)
+        print(f"[ERROR] No se pudo conectar al servidor de Ollama en {ollama_host}: {e}", file=sys.stderr)
         return []
 
 

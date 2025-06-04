@@ -140,50 +140,6 @@ if st.session_state['generando']:
                 type="primary"
             )
         
-        # Mostrar el diagrama del flujo CrewAI como enlace de descarga HTML
-        try:
-            st.markdown("### 🔄 Diagrama del Flujo CrewAI Ejecutado")
-            
-            # Buscar archivo HTML del diagrama
-            html_flow_path = "crewai_flow.html"
-            if os.path.exists(html_flow_path):
-                # Leer el contenido del archivo HTML
-                with open(html_flow_path, "rb") as html_file:
-                    html_content = html_file.read()
-                
-                st.markdown("📊 El diagrama interactivo del flujo CrewAI ha sido generado:")
-                st.download_button(
-                    "📱 Descargar Diagrama HTML Interactivo",
-                    html_content,
-                    file_name=f"diagrama_crewai_{topic_clean}.html",
-                    mime="text/html",
-                    use_container_width=True,
-                    help="Descarga y abre este archivo HTML en tu navegador para ver el diagrama interactivo del flujo CrewAI"
-                )
-                st.info("💡 **Tip:** Abre el archivo HTML descargado en tu navegador para ver el diagrama interactivo completo del flujo de CrewAI.")
-            else:
-                # Intentar generar el diagrama si no existe
-                if flow_executed and 'flow' in locals():
-                    try:
-                        flow_diagram_path = flow.plot(filename="crewai_flow")
-                        if flow_diagram_path and os.path.exists("crewai_flow.html"):
-                            with open("crewai_flow.html", "rb") as html_file:
-                                html_content = html_file.read()
-                            st.download_button(
-                                "📱 Descargar Diagrama HTML Interactivo",
-                                html_content,
-                                file_name=f"diagrama_crewai_{topic_clean}.html",
-                                mime="text/html",
-                                use_container_width=True
-                            )
-                        else:
-                            st.info("ℹ️ No se pudo generar el diagrama del flujo. Puede requerir instalar graphviz: `pip install graphviz`")
-                    except Exception as e:
-                        st.warning(f"⚠️ No se pudo generar el diagrama del flujo: {e}")
-                else:
-                    st.info("ℹ️ El diagrama del flujo se generará automáticamente en la próxima ejecución.")
-        except Exception as e:
-            st.warning(f"⚠️ Error al procesar el diagrama del flujo: {e}")
     else:
         st.error("❌ No se encontró el PDF generado.")
 

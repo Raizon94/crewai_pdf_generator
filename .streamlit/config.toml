@@ -1,0 +1,19 @@
+[server]
+# El servidor debe escuchar en 0.0.0.0 para Docker
+address = "0.0.0.0"
+port = 8501
+# Configurar para mostrar localhost en los mensajes
+headless = true
+
+[browser]
+# Mostrar localhost en lugar de 0.0.0.0 en mensajes del navegador
+serverAddress = "localhost"
+serverPort = 8501
+
+[global]
+# Desactivar estadísticas de uso para logs más limpios
+gatherUsageStats = false
+
+[logger]
+# Configuración de logging
+level = "info"
