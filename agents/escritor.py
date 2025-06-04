@@ -46,6 +46,7 @@ def crear_agente_escritor():
             
             FUNDAMENTAL:
             - Tu unica herramienta es append_to_markdown
+            - El texto de salida debe ser traducido al idioma español
             - Debes usarla para guardar el contenido redactado al final
             - NO intentes usar otras herramientas o tools, ya que eso arruinaría el proceso
             - Debes pasarle como argumento un string con TODO el contenido redactado, incluyendo el título de la sección
@@ -111,10 +112,11 @@ def crear_tarea_redaccion_archivo(agent: Agent, seccion: str, topic: str):
             - NO dejes parámetros vacíos
             - Incluye el título de la sección (##) y todo el contenido
             - El string debe contener MÍNIMO 200 palabras
+            - El texto debe ser traducido al idioma español, no debe haber contenido en inglés
             """,
             expected_output=f"""
             DEBES ENTREGAR:
-            1. El contenido markdown de la sección "{seccion}" (MÍNIMO 200 palabras, preferible 400-600)
+            1. El contenido markdown de la sección "{seccion}" (MÍNIMO 200 palabras, preferible 400-600) el contenido debe ser traducido al español
             2. Confirmación exitosa de la herramienta: "✅ Contenido añadido exitosamente a temp/temp_markdown.md"
             
             VALIDACIÓN: El archivo temp/temp_markdown.md debe crecer en tamaño con tu nueva sección.

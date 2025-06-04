@@ -152,6 +152,7 @@ def crear_tarea_investigacion_automatica(seccion: str, topic: str, agent: Agent)
             - Fuentes consultadas
             
             Aproximadamente 300-500 palabras.
+            Si es posible, traduce la investigación que recuperes al idioma español.
             """,
             agent=agent
         )

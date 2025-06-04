@@ -11,6 +11,7 @@ Aplicación web construida con **Streamlit** que utiliza **CrewAI** y modelos de
 ### Prerrequisitos
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado
 - [Ollama](https://ollama.com/) ejecutándose en tu máquina host
+- (Sólo en Windows) [Bundle de dependencias GTK](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer) instalado
 
 ### 1. Configurar Ollama (en tu máquina, no en Docker)
 ```bash

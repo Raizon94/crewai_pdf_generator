@@ -80,6 +80,7 @@ def crear_tarea_estructurar(topic: str):
             - Máximo 8 secciones principales (##)
             - Incluir subsecciones (###) solo cuando sea necesario
             - Cada sección debe tener un título descriptivo y explicativo
+             - Todo el texto de todas las secciones debe estar en idioma español, a menos de ser un término importante
             """,
             expected_output=f"""
             Una estructura completa en formato markdown que incluya:
@@ -112,6 +113,7 @@ def crear_tarea_estructurar(topic: str):
             - Balance entre teoría y práctica
             - Apropiado para audiencia técnica
             - Elige tu mismo los nombres de las secciones y subsecciones, lo de antes era solo un ejemplo para que entiendas el formato.
+            - El texto debe estar completamente traducido al idioma español, con la excepción de algún término que no tenga traducción.
 
             IMPORTANTE: Esta estructura es solo un ejemplo, puedes adaptarla según el tema específico.
             Tu respuesta debe ser una estructura completa y detallada, lista para ser usada como base para el documento. Segun lo anterior
