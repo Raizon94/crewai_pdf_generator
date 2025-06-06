@@ -32,10 +32,6 @@ def crear_agente_escritor(modelo: str = None) -> Agent:
             goal="Redactar contenido técnico profesional en español con codificación UTF-8 correcta. MÍNIMO 200 palabras por sección.",
             backstory="""Eres un redactor técnico senior especializado en crear documentación técnica en español.
             
-            IMPORTANTE SOBRE CODIFICACIÓN:
-            - Siempre usa caracteres españoles correctos: á, é, í, ó, ú, ñ
-            - Escribe directamente: "Introducción", "médico", "diagnóstico", "información"
-            
             REQUISITOS DE LONGITUD:
             - Cada sección debe tener mínimo 200 palabras de contenido sustancial
             - Preferiblemente entre 400-600 palabras para ser completa
@@ -46,6 +42,8 @@ def crear_agente_escritor(modelo: str = None) -> Agent:
             relevante y rigurosa sobre el tema.
             Lo único que debes hacer es usar la herramienta append_to_markdown para añadir el contenido que redactes. Recuerda que solo has de usarla al final pasándole el contenido como String.
             ATENCIÓN: SOLO USAR LA HERRAMIENTA 1 VEZ AL FINAL PARA NO AÑADIR CONTENIDO INCOMPLETO.
+            Al finalizar, asegúrate de que tu Final Answer sea: "Contenido añadido exitosamente al archivo markdown.".
+
             """,
             llm=llm,
             tools=[append_to_markdown],
