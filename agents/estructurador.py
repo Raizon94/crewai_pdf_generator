@@ -16,26 +16,20 @@ except ImportError:
 
 # ==================== AGENTE ESTRUCTURADOR ====================
 
-def crear_agente_estructurador():
+def crear_agente_estructurador(modelo: str = None) -> Agent:
     """
     Crea y devuelve el agente especializado en estructurar documentos
     """
     try:
-        llm = crear_llm_crewai()
+        llm = crear_llm_crewai(modelo_seleccionado=modelo)
         
         agent = Agent(
             role="Arquitecto de Documentos Técnicos",
             goal="Crear estructuras lógicas, coherentes y profesionales para documentos técnicos y científicos",
             backstory="""Eres un experto arquitecto de información con más de 15 años de experiencia 
             estructurando documentos académicos, científicos y técnicos. Tu especialidad es crear 
-            esquemas claros y lógicos que faciliten la comprensión de temas complejos.
-            
-            Tienes un doctorado en Ciencias de la Información y has trabajado como editor senior 
-            en revistas científicas de prestigio. Conoces perfectamente las mejores prácticas 
-            para organizar contenido técnico de manera que sea accesible tanto para expertos 
-            como para lectores interesados en el tema.
-            
-            Tu filosofía es que una buena estructura es la base de cualquier documento exitoso.""",
+            títulos claros y lógicos que faciliten la comprensión de temas complejos.
+            """,
             llm=llm,
             verbose=True,
             allow_delegation=False,
@@ -48,75 +42,41 @@ def crear_agente_estructurador():
         raise RuntimeError(f"Error creando agente estructurador: {e}")
 
 
-def crear_tarea_estructurar(topic: str):
+def crear_tarea_estructurar(topic: str, agent: Agent) -> Task:
     """
     Crea la tarea de estructuración para el agente
     """
     try:
-        agent = crear_agente_estructurador()
         
         task = Task(
             description=f"""
-            Crear una estructura detallada y profesional para un documento técnico sobre: {topic}
+            Crear una estructura simple y efectiva para un documento técnico sobre: {topic}
             
-            PASOS A SEGUIR:
-            1. Analizar en profundidad el tema propuesto
-            2. Identificar los conceptos fundamentales y aspectos clave a cubrir
-            3. Organizar el contenido en una jerarquía lógica y coherente
-            4. Crear títulos y subtítulos descriptivos y atractivos
-            5. Asegurar que la estructura tenga un flujo narrativo natural
-            6. Incluir secciones de introducción, desarrollo y conclusión
-            7. Verificar que la estructura sea apropiada para el nivel técnico del tema
-            
-            CONSIDERACIONES IMPORTANTES:
-            - La estructura debe ser adecuada para un documento de 8-12 páginas
-            - Cada sección debe tener un propósito claro y diferenciado
-            - Los títulos deben ser descriptivos pero concisos
-            - Debe haber equilibrio entre secciones teóricas y prácticas
-            - Considerar la inclusión de ejemplos, casos de uso o aplicaciones
-            
-            FORMATO REQUERIDO:
-            - Usar formato markdown con niveles jerárquicos claros
-            - Máximo 8 secciones principales (##)
-            - Incluir subsecciones (###) solo cuando sea necesario
-            - Cada sección debe tener un título descriptivo y explicativo
-             - Todo el texto de todas las secciones debe estar en idioma español, a menos de ser un término importante
+            INSTRUCCIONES:
+            - Un título general
+            - Crea entre 8-12 títulos principales
+            - Los títulos deben seguir una secuencia lógica (desde introducción hasta conclusión)
+            - Cada título debe ser descriptivo y específico al tema
+            - Los títulos deben estar en español
+            - Usa formato markdown con dos almohadillas (##) para cada título principal
             """,
             expected_output=f"""
-            Una estructura completa en formato markdown que incluya:
+            Una lista de 8-12 títulos principales en formato markdown para un documento sobre {topic}:
             
-            # [Título Principal del Documento sobre {topic}]
+            # {topic}
             
             ## 1. Introducción
-            [Breve descripción del propósito de esta sección]
             
-            ## 2. [Conceptos Fundamentales/Marco Teórico]
-            ### 2.1 [Subtema si es necesario]
-            ### 2.2 [Subtema si es necesario]
+            ## 2. [Título específico relevante]
             
-            ## 3. [Sección de Desarrollo Principal]
+            ## 3. [Título específico relevante]
             
-            ## 4. [Metodología/Implementación/Técnicas]
+            ...
             
-            ## 5. [Aplicaciones/Casos de Uso/Ejemplos]
+            ## [8-12]. Conclusiones
             
-            ## 6. [Ventajas y Limitaciones/Análisis Crítico]
-            
-            ## 7. [Tendencias Futuras/Perspectivas]
-            
-            ## 8. Conclusiones
-            
-            REQUISITOS:
-            - Mínimo 6 secciones principales, máximo 8
-            - Títulos específicos y descriptivos (no genéricos)
-            - Estructura lógica y progresiva
-            - Balance entre teoría y práctica
-            - Apropiado para audiencia técnica
-            - Elige tu mismo los nombres de las secciones y subsecciones, lo de antes era solo un ejemplo para que entiendas el formato.
-            - El texto debe estar completamente traducido al idioma español, con la excepción de algún término que no tenga traducción.
-
-            IMPORTANTE: Esta estructura es solo un ejemplo, puedes adaptarla según el tema específico.
-            Tu respuesta debe ser una estructura completa y detallada, lista para ser usada como base para el documento. Segun lo anterior
+            Los títulos deben ser descriptivos, específicos al tema, y estar en un orden lógico.
+            No incluir subtítulos ni descripciones adicionales.
             """,
             agent=agent
         )

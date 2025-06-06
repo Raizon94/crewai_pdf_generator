@@ -16,12 +16,12 @@ except ImportError:
 
 # ==================== AGENTE ESCRITOR ====================
 
-def crear_agente_escritor():
+def crear_agente_escritor(modelo: str = None) -> Agent:
     """
     Crea y devuelve el agente especializado en redacción técnica
     """
     try:
-        llm = crear_llm_crewai()
+        llm = crear_llm_crewai(modelo_seleccionado=modelo)
         
         # Importar la tool de append
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,35 +31,20 @@ def crear_agente_escritor():
             role="Redactor Técnico Especializado en Español",
             goal="Redactar contenido técnico profesional en español con codificación UTF-8 correcta. MÍNIMO 200 palabras por sección.",
             backstory="""Eres un redactor técnico senior especializado en crear documentación técnica en español.
-            ADVERTENCIA: TU HERRAMIENTA USA UN ARGUMENTO CONTENT POSICIONAL, NO LA USES ANTES DE SABER QUE LE VAS A PASAR
+            
             IMPORTANTE SOBRE CODIFICACIÓN:
             - Siempre usa caracteres españoles correctos: á, é, í, ó, ú, ñ
-            - NO uses caracteres como Ã¡, Ã©, Ã­, Ã³, Ãº que son errores de codificación
             - Escribe directamente: "Introducción", "médico", "diagnóstico", "información"
-            - NUNCA escribas: "IntroducciÃ³n", "mÃ©dico", "diagnÃ³stico", "informaciÃ³n"
             
-            REQUISITOS DE LONGITUD CRÍTICOS:
-            - Cada sección debe tener MÍNIMO 200 palabras de contenido sustancial
+            REQUISITOS DE LONGITUD:
+            - Cada sección debe tener mínimo 200 palabras de contenido sustancial
             - Preferiblemente entre 400-600 palabras para ser completa
-            - NO escribas contenido superficial o demasiado breve
-            - Si una sección es corta, se te pedirá que la reescribas
+            - El texto debe estar en español correcto
             
-            FUNDAMENTAL:
-            - Tu unica herramienta es append_to_markdown
-            - El texto de salida debe ser traducido al idioma español
-            - Debes usarla para guardar el contenido redactado al final
-            - NO intentes usar otras herramientas o tools, ya que eso arruinaría el proceso
-            - Debes pasarle como argumento un string con TODO el contenido redactado, incluyendo el título de la sección
-            - PROHINIDO usar diccionarios o estructuras complejas, solo strings simples
-            - El string debe contener MÍNIMO 200 palabras, preferiblemente 400-600
-            - El formato debe ser algo como: append_to_markdown(content="## Título de la sección\n\n[Tu contenido aquí]")
-            Tu proceso es:
-            1. Redactar contenido técnico profesional EN ESPAÑOL CORRECTO con MÍNIMO 200 palabras
-            2. Usar append_to_markdown para guardarlo inmediatamente. Solo tienes esta herramienta, no intentes usar otras. ¡IMPORTANTE!
-            3. Confirmar que se guardó correctamente
-
-            Recuerda que tu unica herramienta es append_to_markdown, y debes usarla para guardar el contenido redactado. No intentes usar ninguna otra herramienta o tool ya que fastidiarías todo nuestro trabajo.
-
+            Tu especialidad es redactar textos técnicos bien estructurados, detallados y de alta calidad,
+            asegurando que cada sección cumple con los requisitos de longitud y contiene información
+            relevante y rigurosa sobre el tema.
+            Lo único que debes hacer es usar la herramienta append_to_markdown para añadir el contenido que redactes. Recuerda que solo has de usarla al final pasándole el contenido como String.
             """,
             llm=llm,
             tools=[append_to_markdown],
@@ -81,47 +66,23 @@ def crear_tarea_redaccion_archivo(agent: Agent, seccion: str, topic: str):
     try:
         task = Task(
             description=f"""
-            TAREA ESPECÍFICA: Redactar la sección "{seccion}" sobre {topic} y guardarla en el archivo.
+            TAREA: Redactar la sección "{seccion}" sobre {topic} y guardarla en el archivo.
 
-            REQUISITOS CRÍTICOS DE LONGITUD:
-            - La sección debe tener MÍNIMO 200 palabras de contenido sustancial
-            - Preferiblemente entre 400-600 palabras para ser completa y profesional
-            - NO escribas contenido superficial, breve o de relleno
-            - Desarrolla cada punto con ejemplos específicos y detalles técnicos
-
-            PASO 1 - REDACTAR:
-            Crear contenido markdown profesional para la sección "{seccion}".
+            Redacta contenido técnico profesional en formato markdown para la sección especificada.
+            El contenido debe ser en español, tener entre 400-600 palabras y utilizar el formato:
             
-            FORMATO EXACTO:
             ## {seccion}
-
-            [Aquí tu contenido DETALLADO de 400-600 palabras sobre {seccion}]
             
-            PASO 2 - GUARDAR OBLIGATORIO:
-            Usar la herramienta append_to_markdown pasando TODO el contenido que redactaste.
+            [Contenido detallado sobre el tema]
             
-            FORMATO CORRECTO PARA USAR LA HERRAMIENTA:
-            append_to_markdown(content="## {seccion}\n\n[Tu contenido completo aquí]")
-            
-            EJEMPLO ESPECÍFICO:
-            append_to_markdown(content="## Introducción\n\nLa inteligencia artificial en medicina representa...")
-            
-            IMPORTANTE:
-            - Pasa el contenido como UN SOLO STRING
-            - NO uses diccionarios o estructuras complejas
-            - NO dejes parámetros vacíos
-            - Incluye el título de la sección (##) y todo el contenido
-            - El string debe contener MÍNIMO 200 palabras
-            - El texto debe ser traducido al idioma español, no debe haber contenido en inglés
+            Guarda el contenido usando la herramienta append_to_markdown cuando hayas terminado y estés seguro de que es contenido válido.
             """,
             expected_output=f"""
-            DEBES ENTREGAR:
-            1. El contenido markdown de la sección "{seccion}" (MÍNIMO 200 palabras, preferible 400-600) el contenido debe ser traducido al español
-            2. Confirmación exitosa de la herramienta: "✅ Contenido añadido exitosamente a temp/temp_markdown.md"
-            
-            VALIDACIÓN: El archivo temp/temp_markdown.md debe crecer en tamaño con tu nueva sección.
-            
-            IMPORTANTE: Si escribes menos de 200 palabras, se te pedirá que reescribas la sección con más detalle.
+            Una sección bien redactada sobre "{seccion}" con:
+            - Contenido técnico detallado en español
+            - Longitud entre 400-600 palabras
+            - Formato markdown correcto
+            - Confirmación de que el contenido ha sido añadido exitosamente
             """,
             agent=agent
         )

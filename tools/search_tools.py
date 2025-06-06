@@ -109,7 +109,7 @@ def _buscar_web_base(query: str) -> str:
 
 # ==================== HERRAMIENTA PARA AGENTES ====================
 
-@tool("BuscadorWeb")
+@tool("buscar_web")
 def buscar_web(query: str) -> str:
     """Realiza una búsqueda web utilizando la API de Google Serper.
     

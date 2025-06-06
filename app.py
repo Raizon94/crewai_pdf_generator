@@ -3,8 +3,6 @@ import os
 import random
 from flows.documento_flow import DocumentoFlowCompleto, DocumentoState
 from utils.llm_selector import obtener_modelos_disponibles_ollama
-from utils.llm_provider import crear_llm_crewai
-import sys
 
 st.set_page_config(page_title="Generador de PDF CrewAI", layout="centered")
 st.title("📄 Generador de PDF CrewAI")
@@ -60,32 +58,71 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Obtener modelos instalados realmente
+# --------------------------------------------------------
+# Paso 1: Obtener la lista de modelos disponibles
+# --------------------------------------------------------
 modelos = obtener_modelos_disponibles_ollama()
 if not modelos:
     st.error("No se encontraron modelos Ollama instalados. ¿Está corriendo el demonio y tienes modelos descargados?")
     st.stop()
 
-if 'generando' not in st.session_state:
-    st.session_state['generando'] = False
+# --------------------------------------------------------
+# Paso 2: Inicializar flags en session_state
+# --------------------------------------------------------
+#   - 'generando' indica si ya lanzamos el flujo de generación
+#   - 'pdf_ok' para saber si existe PDF listo para descarga
+#   - 'error_generacion' para guardar cualquier mensaje de error
+if "generando" not in st.session_state:
+    st.session_state["generando"] = False
+if "pdf_ok" not in st.session_state:
+    st.session_state["pdf_ok"] = False
+if "error_generacion" not in st.session_state:
+    st.session_state["error_generacion"] = ""
 
-campos_disabled = st.session_state['generando']
+# --------------------------------------------------------
+# Paso 3: Mostrar formulario para seleccionar modelo y tópico
+# --------------------------------------------------------
+with st.form(key="form_pdf"):
+    # Si nunca se seleccionó modelo, inicializamos con el primero
+    if "modelo_llm" not in st.session_state:
+        st.session_state["modelo_llm"] = modelos[0]
 
-# Formulario SIEMPRE visible, lógica de generación fuera
-modelo = st.selectbox("Selecciona el modelo LLM", modelos, key="modelo_llm", disabled=campos_disabled)
-topic = st.text_input("Tópico del documento", value="Arquitectura Transformer en los LLM", key="topic_input", disabled=campos_disabled)
-submit = st.button("Generar PDF", use_container_width=True, disabled=campos_disabled)
+    modelo = st.selectbox(
+        "Selecciona el modelo LLM",
+        modelos,
+        index=modelos.index(st.session_state["modelo_llm"]),
+        key="modelo_llm",
+        help="Elige el modelo Ollama que tienes descargado."
+    )
+    topic = st.text_input(
+        "Tópico del documento",
+        value=st.session_state.get("topic_input", "Arquitectura Transformer en los LLM"),
+        key="topic_input"
+    )
+    submit = st.form_submit_button("Generar PDF", use_container_width=True)
 
-if submit and not st.session_state['generando']:
-    st.session_state['generando'] = True
-    st.rerun()
+# --------------------------------------------------------
+# Paso 4: Cuando se envía el formulario, lanzamos la generación
+# --------------------------------------------------------
+if submit and not st.session_state["generando"]:
+    # Bloqueamos nuevos envíos
+    st.session_state["generando"] = True
+    # Reseteamos indicadores
+    st.session_state["pdf_ok"] = False
+    st.session_state["error_generacion"] = ""
+    # A continuación, la recarga natural del formulario trae los valores
+    # con session_state["modelo_llm"] y session_state["topic_input"] actualizados.
 
-if st.session_state['generando']:
+# --------------------------------------------------------
+# Paso 5: Si estamos en modo “generando”, mostramos spinner + info
+# --------------------------------------------------------
+if st.session_state["generando"]:
     st.markdown("""
         <div style='background-color:#ffe066; padding:1em; border-radius:8px; text-align:center; font-size:1.15em; font-weight:bold; color:#b8860b;'>
         🚦 No toques nada, la IA está concentrada 🚦
         </div>
     """, unsafe_allow_html=True)
+
     frases = [
         "Puede tardar hasta 10 minutos...",
         "Ten paciencia, se está cocinando la magia...",
@@ -97,66 +134,69 @@ if st.session_state['generando']:
     ]
     mensaje = random.choice(frases)
     with st.spinner(mensaje):
-        st.info(f"Modelo seleccionado: {st.session_state['modelo_llm']}")
+        # ----------------------------------------------------------------------------------
+        # - Obtenemos el modelo elegido y el tópico final desde session_state (ya actualizados)
+        # - Ejecutamos el flujo de generación de PDF
+        # ----------------------------------------------------------------------------------
+        modelo_llm = st.session_state["modelo_llm"]
+        topic_actual = st.session_state["topic_input"]
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
-        
-        topic_actual = st.session_state["topic_input"]
-        flow_executed = False
-        execution_error = None
-        
+
         try:
-            llm = crear_llm_crewai(st.session_state['modelo_llm'])
-        except Exception as e:
-            execution_error = f"Error inicializando LLM: {e}"
-        
-        if not execution_error:
-            try:
-                flow = DocumentoFlowCompleto(state=DocumentoState(topic=topic_actual))
-                flow.kickoff(inputs={"topic": topic_actual})
-                flow_executed = True
-            except Exception as e:
-                execution_error = f"Error ejecutando el flujo: {e}"
-    
-    # IMPORTANTE: Resetear el estado FUERA del spinner para permitir que la UI se actualice
-    st.session_state['generando'] = False
-    
-    # Manejar errores después del spinner
-    if execution_error:
-        st.error(execution_error)
-        st.rerun()
-    
-    topic_clean = topic_actual.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    pdf_path = os.path.join(output_dir, f"{topic_clean}.pdf")
-    
-    if os.path.exists(pdf_path):
-        st.success(f"✅ PDF generado exitosamente: {pdf_path}")
-        with open(pdf_path, "rb") as f:
-            st.download_button(
-                "📥 Descargar PDF", 
-                f, 
-                file_name=f"{topic_clean}.pdf", 
-                use_container_width=True,
-                type="primary"
+            flow = DocumentoFlowCompleto(
+                state=DocumentoState(topic=topic_actual, modelo=modelo_llm)
             )
-        
+            flow.kickoff(inputs={"topic": topic_actual, "modelo": modelo_llm})
+            # Si no arroja excepción, asumimos que el PDF se creó
+            st.session_state["pdf_ok"] = True
+        except Exception as e:
+            st.session_state["error_generacion"] = f"Error ejecutando el flujo: {e}"
+            st.session_state["pdf_ok"] = False
+
+    # Terminó el “spinner”: desbloqueamos la UI
+    st.session_state["generando"] = False
+
+    # Si hubo error, lo mostramos y detenemos
+    if st.session_state["error_generacion"]:
+        st.error(st.session_state["error_generacion"])
+    # Si todo fue bien, indicamos que el PDF está listo
+    elif st.session_state["pdf_ok"]:
+        topic_clean = topic_actual.replace(" ", "_").replace("/", "_").replace("\\", "_")
+        pdf_path = os.path.join(output_dir, f"{topic_clean}.pdf")
+        if os.path.exists(pdf_path):
+            st.success(f"✅ PDF generado exitosamente: {pdf_path}")
+            with open(pdf_path, "rb") as f:
+                st.download_button(
+                    "📥 Descargar PDF",
+                    f,
+                    file_name=f"{topic_clean}.pdf",
+                    use_container_width=True,
+                    type="primary"
+                )
+        else:
+            st.error("❌ No se encontró el PDF generado después de la ejecución.")
     else:
-        st.error("❌ No se encontró el PDF generado.")
+        # Si no hay PDF y tampoco error explícito, mensaje genérico
+        st.error("❌ Ocurrió un problema desconocido al generar el PDF.")
 
-# Mostrar información del modelo (checkbox bloqueado si se está generando)
-st.checkbox("Mostrar información del modelo LLM", disabled=campos_disabled, key="mostrar_info_modelo")
-
-if st.session_state.get("mostrar_info_modelo", False):
+# --------------------------------------------------------
+# Paso 6: Mostrar info extra del modelo si el usuario marca el checkbox
+# --------------------------------------------------------
+campos_disabled = st.session_state["generando"]
+mostrar_info = st.checkbox("Mostrar información del modelo LLM", disabled=campos_disabled, key="mostrar_info_modelo")
+if mostrar_info:
     st.write(f"Modelo actual: {st.session_state.get('modelo_llm', 'Ninguno')}")
     st.write("Puedes cambiar los modelos disponibles descargando más modelos con Ollama.")
 
+
+# --------------------------------------------------------
+# Aviso si se ejecuta con python en lugar de streamlit
+# --------------------------------------------------------
 if __name__ == "__main__":
-    # Detectar si se está ejecutando bajo Streamlit
     import os
     import sys
-    is_streamlit = any(
-        "streamlit" in arg for arg in sys.argv
-    ) or "STREAMLIT_RUN" in os.environ
+    is_streamlit = any("streamlit" in arg for arg in sys.argv) or "STREAMLIT_RUN" in os.environ
     if not is_streamlit:
         print("\033[91m[WARNING]\033[0m Este script debe ejecutarse con: \033[1mstreamlit run app.py\033[0m\nNo lo ejecutes con 'python app.py'. ")
         sys.exit(1)

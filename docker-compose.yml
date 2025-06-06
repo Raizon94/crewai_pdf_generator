@@ -12,6 +12,12 @@ services:
       - ./output:/app/output
       - ./temp:/app/temp
       - ./.env:/app/.env:ro
+      # Montar código fuente para desarrollo (los cambios se reflejan sin rebuild)
+      - ./tools:/app/tools
+      - ./agents:/app/agents
+      - ./flows:/app/flows
+      - ./utils:/app/utils
+      - ./app.py:/app/app.py
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

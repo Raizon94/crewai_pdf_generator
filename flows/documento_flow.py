@@ -25,6 +25,7 @@ except ImportError as e:
 
 class DocumentoState(BaseModel):
     topic: str = ""
+    modelo: str | None = None  # Corregido para permitir None en un campo str
     estructura_completa: str = ""
     secciones_lista: list = []
     seccion_actual: int = 0
@@ -61,8 +62,8 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
         print(f"\n📋 PASO 1: ESTRUCTURADOR - Creando estructura del documento")
         
         # Usar agente estructurador
-        agente = crear_agente_estructurador()
-        tarea = crear_tarea_estructurar(self.state.topic)
+        agente = crear_agente_estructurador(self.state.modelo)
+        tarea = crear_tarea_estructurar(self.state.topic, agente)
         
         crew = Crew(
             agents=[agente],
@@ -109,58 +110,57 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     
     @listen(limpiar_y_crear_estructura_documento)
     def procesar_seccion_individual(self, _):
-        """Paso 2: Procesar una sección individual"""
-        print(f"\nPASO 2: PROCESAMIENTO DE SECCIONES INDIVIDUALES")
-        
-        # Verificar si hemos terminado todas las secciones
-        if self.state.seccion_actual >= len(self.state.secciones_lista):
-            print(f"\n✅ TODAS LAS SECCIONES HAN SIDO COMPLETADAS")
-            return "todas_secciones_completadas"
-        
-        seccion_actual = self.state.secciones_lista[self.state.seccion_actual]
-        print(f"\nPROCESANDO SECCIÓN {self.state.seccion_actual + 1}/{self.state.total_secciones}: {seccion_actual}")
-        
-        
-        # Guardar contenido antes de procesar
-        if os.path.exists(self.state.archivo_markdown):
-            with open(self.state.archivo_markdown, 'r', encoding='utf-8') as f:
-                self.state.contenido_antes_seccion = f.read()
-        
-        # Crear y ejecutar crew para esta sección
-        agente_buscador = crear_agente_buscador_automatico()
-        agente_escritor = crear_agente_escritor()
-        tasks = []
-        for i, section in enumerate(self.state.secciones_lista):
+        """Paso 2: Procesar todas las secciones de golpe, en orden."""
+        print(f"\nPASO 2: PROCESAMIENTO DE TODAS LAS SECCIONES DE GOLPE")
 
-            tarea_investigacion = crear_tarea_investigacion_automatica(
-                section, 
+        # 1) Si ya procesamos todo, saltamos
+        if not self.state.secciones_lista:
+            print("✅ No hay secciones para procesar.")
+            return "todas_secciones_completadas"
+
+
+        tasks = []
+
+        # 3) Para cada sección, creamos:
+        #    - Una tarea de investigación con nombre único "investigar_{i}"
+        #    - Una tarea de redacción "redactar_{i}", que dependa de la anterior
+        for idx, seccion in enumerate(self.state.secciones_lista):
+            agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo)
+            agente_escritor = crear_agente_escritor(modelo=self.state.modelo)
+            # ======= TAREA DE INVESTIGACIÓN =======
+            tarea_inv = crear_tarea_investigacion_automatica(
+                seccion,
                 self.state.topic,
                 agente_buscador
             )
-            
-            tarea_redaccion = crear_tarea_redaccion_archivo(
+            # Nombre único para organización
+            tarea_inv.name = f"investigar_{idx}"
+            tasks.append(tarea_inv)
+
+            # ======= TAREA DE REDACCIÓN =======
+            tarea_red = crear_tarea_redaccion_archivo(
                 agente_escritor,
-                section,
+                seccion,
                 self.state.topic
             )
-            tarea_redaccion.context = [tarea_investigacion]
-            tasks.append(tarea_investigacion)
-            tasks.append(tarea_redaccion)
-        
+            tarea_red.name = f"redactar_{idx}"
+            # Establezco contexto para que espere a la investigación previa
+            tarea_red.context = [tarea_inv]
+            tasks.append(tarea_red)
+
+        # 4) Creo el Crew con todas las tareas en secuencia
         crew_seccion = Crew(
             agents=[agente_buscador, agente_escritor],
             tasks=tasks,
             process=Process.sequential,
             verbose=True
         )
-        
-        crew_seccion.kickoff(inputs={
-            "topic": self.state.topic,
-            "seccion": seccion_actual
-        })
-        
 
-        return "seccion_procesada"
+        # 5) Arranco el crew - el agente decidirá automáticamente cuándo usar herramientas
+        crew_seccion.kickoff()
+
+        # 6) Marcamos como completado: ya hicimos todo de golpe
+        return "todas_secciones_completadas"
     
     
 

@@ -31,13 +31,14 @@ def crear_llm_crewai(modelo_seleccionado=None):
             base_url=base_url,
             api_key="ollama",
             # CONFIGURACIÓN ANTI-TRUNCAMIENTO
-            max_tokens=4096,  # Máximo permitido para respuestas largas
+            max_tokens=2024,  # Máximo permitido para respuestas largas
             temperature=0.3,  # Menor para respuestas más consistentes
             timeout=600,  # 10 minutos timeout
             # CONFIGURACIONES ADICIONALES
             top_p=0.9,
-            frequency_penalty=0.1,
-            presence_penalty=0.1
+            repetition_penalty=1.1,
+            system_template="",
+            prompt_template="{{user_input}}"
         )
         
         return llm
