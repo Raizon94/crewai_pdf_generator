@@ -41,23 +41,23 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     @start()
     def limpiar_y_crear_estructura_documento(self):
         """Paso 1: Limpiar carpeta temp, generar estructura y extraer lista de secciones."""
-        print(f"🚀 INICIANDO FLUJO DE DOCUMENTACIÓN COMPLETO")
-        print(f"📋 Tema: {self.state.topic}")
+        print(f"INICIANDO FLUJO DE DOCUMENTACIÓN COMPLETO")
+        print(f"Tema: {self.state.topic}")
 
         # 1. Limpiar carpeta temp
         if os.path.exists("temp"):
             try:
                 shutil.rmtree("temp")
-                print("🗑️ Carpeta 'temp' eliminada completamente.")
+                print("Carpeta 'temp' eliminada completamente.")
             except Exception as e:
-                print(f"⚠️ Error eliminando carpeta 'temp': {e}")
+                print(f"Error eliminando carpeta 'temp': {e}")
 
         # 2. Crear carpeta temp vacía
         os.makedirs("temp", exist_ok=True)
-        print("📁 Carpeta 'temp' creada limpia.")
+        print("Carpeta 'temp' creada limpia.")
 
         # 3. Invocar agente estructurador para obtener la estructura completa
-        print("\n📋 PASO 1: ESTRUCTURADOR - Generando esquema del documento")
+        print("\nPASO 1: ESTRUCTURADOR - Generando esquema del documento")
         agente_estructurador = crear_agente_estructurador(self.state.modelo)
         tarea_estructurar = crear_tarea_estructurar(self.state.topic, agente_estructurador)
 
@@ -86,7 +86,7 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
         self.state.secciones_lista = secciones
         self.state.total_secciones = len(secciones)
 
-        print(f"\n✅ Estructura detectada con {self.state.total_secciones} secciones:")
+        print(f"\nEstructura detectada con {self.state.total_secciones} secciones:")
         for i, s in enumerate(self.state.secciones_lista, start=1):
             print(f"   {i}. {s}")
 
@@ -95,9 +95,9 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
             os.makedirs(os.path.dirname(self.state.archivo_markdown), exist_ok=True)
             with open(self.state.archivo_markdown, "w", encoding="utf-8") as f:
                 f.write(f"# {self.state.topic}\n\n")
-            print(f"📄 Archivo Markdown iniciado en: {self.state.archivo_markdown}")
+            print(f"Archivo Markdown iniciado en: {self.state.archivo_markdown}")
         except Exception as e:
-            print(f"⚠️ Error escribiendo el archivo Markdown: {e}")
+            print(f"Error escribiendo el archivo Markdown: {e}")
 
         # Pasar al procesamiento de todas las secciones
         return "procesar_seccion"
@@ -105,10 +105,10 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     @listen(limpiar_y_crear_estructura_documento)
     def procesar_seccion(self, _):
         """Paso 2: Iterar por cada sección, creando agentes frescos y ejecutando investigación + redacción."""
-        print(f"\n📝 PASO 2: Procesando todas las secciones, una por una")
+        print(f"\nPASO 2: Procesando todas las secciones, una por una")
 
         for idx, seccion in enumerate(self.state.secciones_lista):
-            print(f"   ▶️ Procesando sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
+            print(f"   Procesando sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
 
             # 1) Crear un agente de búsqueda y otro de redacción frescos para esta sección
             agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo)
@@ -151,7 +151,7 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     @listen(procesar_seccion)
     def buscar_imagen_portada(self, _):
         """Paso 3: Buscar imagen de portada para el documento completo."""
-        print(f"\n🖼️ PASO 3: BÚSQUEDA DE IMAGEN - Buscando imagen de portada para '{self.state.topic}'")
+        print(f"\nPASO 3: BÚSQUEDA DE IMAGEN - Buscando imagen de portada para '{self.state.topic}'")
         print(f"Secciones procesadas: {self.state.total_secciones}/{self.state.total_secciones}")
 
         try:
@@ -160,15 +160,15 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
                 filename = imagen_path.split(":", 1)[-1].strip()
                 if os.path.exists(filename):
                     self.state.imagen_portada = filename
-                    print(f"✅ Imagen de portada descargada: {filename}")
+                    print(f"Imagen de portada descargada: {filename}")
                 else:
-                    print(f"⚠️ No se encontró la imagen descargada: {filename}")
+                    print(f"No se encontró la imagen descargada: {filename}")
                     self.state.imagen_portada = ""
             else:
-                print(f"⚠️ No fue posible descargar imagen para: {self.state.topic}")
+                print(f"No fue posible descargar imagen para: {self.state.topic}")
                 self.state.imagen_portada = ""
         except Exception as e:
-            print(f"⚠️ Error buscando imagen de portada: {e}")
+            print(f"Error buscando imagen de portada: {e}")
             self.state.imagen_portada = ""
 
         return "imagen_buscada"
@@ -176,17 +176,17 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     @listen(buscar_imagen_portada)
     def compilar_documento_final(self, _):
         """Paso 4: Compilar el Markdown completo en un PDF, incluyendo la portada."""
-        print(f"\n📄 PASO 4: COMPILACIÓN FINAL - Generando PDF")
+        print(f"\nPASO 4: COMPILACIÓN FINAL - Generando PDF")
 
         if not os.path.exists(self.state.archivo_markdown):
-            print(f"⚠️ Error: El archivo Markdown no existe: {self.state.archivo_markdown}")
+            print(f"Error: El archivo Markdown no existe: {self.state.archivo_markdown}")
             return "error_compilacion"
 
         try:
             with open(self.state.archivo_markdown, "r", encoding="utf-8") as f:
                 contenido_markdown = f.read()
 
-            print("📑 Generando PDF a partir del Markdown...")
+            print("Generando PDF a partir del Markdown...")
             pdf_path = _generar_pdf_base(
                 contenido_markdown,
                 self.state.imagen_portada,
@@ -195,13 +195,13 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
 
             if pdf_path and os.path.exists(pdf_path):
                 self.state.pdf_final = pdf_path
-                print(f"✅ PDF generado: {self.state.pdf_final}")
+                print(f"PDF generado: {self.state.pdf_final}")
             else:
-                print("⚠️ Error al generar el PDF.")
+                print("Error al generar el PDF.")
                 return "error_compilacion"
 
         except Exception as e:
-            print(f"⚠️ Excepción al compilar el PDF: {e}")
+            print(f"Excepción al compilar el PDF: {e}")
             return "error_compilacion"
 
         return "documento_completado"
@@ -209,7 +209,7 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
     @listen(compilar_documento_final)
     def mover_pdf_y_mostrar_estadisticas_finales(self, _):
         """Paso 5: Mover el PDF a 'output/' y mostrar estadísticas del flujo."""
-        print(f"\n🚚 PASO 5: ORGANIZACIÓN FINAL - Moviendo PDF a carpeta 'output'")
+        print(f"\nPASO 5: ORGANIZACIÓN FINAL - Moviendo PDF a carpeta 'output'")
 
         os.makedirs("output", exist_ok=True)
         topic_clean = self.state.topic.replace(" ", "_").replace("/", "_").replace("\\", "_")
@@ -219,12 +219,12 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
             try:
                 shutil.move(self.state.pdf_final, destino)
                 self.state.pdf_final = destino
-                print(f"✅ PDF movido a: {destino}")
+                print(f"PDF movido a: {destino}")
             except Exception as e:
-                print(f"⚠️ Error moviendo PDF: {e}")
+                print(f"Error moviendo PDF: {e}")
 
         print("\n" + "=" * 60)
-        print("🎉 FLUJO COMPLETO FINALIZADO")
+        print("FLUJO COMPLETO FINALIZADO")
         print("=" * 60)
         print(f"Tema del documento: {self.state.topic}")
         print(f"Total de secciones procesadas: {self.state.total_secciones}")
@@ -234,14 +234,14 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
                 contenido = f.read()
             palabras = len(contenido.split())
             lineas = len(contenido.split("\n"))
-            print("📊 Estadísticas del documento:")
+            print("Estadísticas del documento:")
             print(f"   • Palabras: {palabras}")
             print(f"   • Líneas: {lineas}")
 
         if self.state.pdf_final and os.path.exists(self.state.pdf_final):
             size_bytes = os.path.getsize(self.state.pdf_final)
             size_mb = size_bytes / (1024 * 1024)
-            print(f"📄 PDF final: {self.state.pdf_final}")
+            print(f"PDF final: {self.state.pdf_final}")
             print(f"   • Tamaño: {size_bytes} bytes ({size_mb:.2f} MB)")
 
         print("=" * 60)

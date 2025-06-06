@@ -54,7 +54,7 @@ Trabajo realizado por <b>William Atef Tadrous</b> y <b>Julián Cussianovich</b> 
 
 st.markdown("""
 <div style='background-color:#ffe6e6; padding:0.7em; border-radius:8px; text-align:center; font-size:1em; font-weight:bold; color:#b80000; border:2px solid #b80000;'>
-⚠️ <u>IMPORTANTE</u>: Este software ha sido desarrollado y optimizado para el modelo <b>gemma3:1b o/y gemma3:4b</b>. Se recomienda usar esos LLM para obtener los mejores resultados.
+⚠️ <u>IMPORTANTE</u>: Este software ha sido desarrollado y optimizado específicamente para el modelo <b>gemma3:4b</b>. Solo se puede asegurar que funciona correctamente con este LLM.
 </div>
 """, unsafe_allow_html=True)
 

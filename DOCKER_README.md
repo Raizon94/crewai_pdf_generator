@@ -6,7 +6,7 @@ Este proyecto genera documentos PDF utilizando CrewAI y LLMs a través de Ollama
 
 **Desarrollado por:** William Atef Tadrous y Julián Cussianovich  
 **Asignatura:** AIN - Grupo 3CO11  
-**Optimizado para:** gemma3:1b y gemma3:4b
+**Optimizado para:** gemma3:4b
 
 ## 🏗️ Arquitectura
 
@@ -53,8 +53,7 @@ ollama list
 # Ejecutar el servicio
 ollama serve
 
-# Descargar los modelos recomendados
-ollama pull gemma3:1b
+# Descargar el modelo recomendado
 ollama pull gemma3:4b
 ```
 
@@ -213,7 +212,8 @@ OLLAMA_HOST=172.17.0.1:11434
 ```
 
 ### La aplicación es muy lenta
-- Usar `gemma3:1b` en lugar de `gemma3:4b` para mayor velocidad
+- Verificar memoria RAM disponible (recomendado mínimo 8GB)
+- Usar `gemma3:4b` que está optimizado para este proyecto
 - Verificar que tienes suficiente RAM disponible
 - Cerrar otras aplicaciones que usen mucha memoria
 

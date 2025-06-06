@@ -4,7 +4,7 @@ Aplicación web construida con **Streamlit** que utiliza **CrewAI** y modelos de
 
 **Desarrollado por:** William Atef Tadrous y Julián Cussianovich  
 **Asignatura:** AIN - Grupo 3CO11  
-**Optimizado para:** gemma3:1b y gemma3:4b
+**Optimizado para:** gemma3:4b
 
 ## 🚀 Inicio Rápido con Docker
 
@@ -18,9 +18,8 @@ Aplicación web construida con **Streamlit** que utiliza **CrewAI** y modelos de
 # Ejecutar el servicio
 ollama serve
 
-# Descargar modelos recomendados
+# Descargar modelo recomendado
 ollama pull gemma3:4b
-ollama pull gemma3:1b
 ```
 
 ### 2. Configurar el proyecto
@@ -82,12 +81,12 @@ docker compose up
 ## ✨ Funcionalidades Principales
 
 - **🌐 Interfaz Web Intuitiva**: Construida con Streamlit y completamente containerizada
-- **🤖 Múltiples Agentes IA**: CrewAI orquesta agentes especializados para cada tarea
+- **🤖 Múltiples Agentes IA**: CrewAI Flows orquesta agentes especializados con control de flujo robusto
 - **🎯 Selección de Modelos**: Compatible con múltiples modelos LLM a través de Ollama
 - **📝 Generación Automatizada**: Investigación, estructuración y redacción completamente automática
-- **📊 Visualización del Flujo**: Diagrama interactivo HTML del proceso CrewAI
+- **🔄 Flujo Secuencial Garantizado**: Control de estados y transiciones automáticas entre fases
 - **📋 Exportación PDF**: Documentos profesionales con imágenes y formato avanzado
-- **🔧 Optimizado para gemma3**: Configuración específica para mejores resultados
+- **🔧 Optimizado para gemma3:4b**: Configuración específica para mejores resultados
 
 ## 🛠️ Comandos Útiles
 
@@ -134,9 +133,9 @@ OLLAMA_HOST=172.17.0.1:11434
 ```
 
 ### Aplicación muy lenta
-- Usar `gemma3:1b` en lugar de `gemma3:4b`
-- Verificar memoria RAM disponible
+- Verificar memoria RAM disponible (recomendado mínimo 8GB)
 - Cerrar aplicaciones que consuman recursos
+- Usar `gemma3:4b` que está optimizado para este proyecto
 
 ## 📚 Documentación Detallada
 
@@ -157,7 +156,7 @@ streamlit run app.py
 - **🐳 Docker**: Containerización para despliegue consistente
 - **🐍 Python 3.11**: Lenguaje base de la aplicación
 - **⚡ Streamlit**: Framework para la interfaz web interactiva
-- **🤖 CrewAI**: Orquestación avanzada de agentes de IA
+- **🤖 CrewAI Flows**: Orquestación avanzada de agentes con control de flujo robusto
 - **🦙 Ollama**: Ejecución local optimizada de LLMs
 - **🔗 LangChain**: Integración de cadenas de LLM (usado por CrewAI)
 - **📄 WeasyPrint**: Generación profesional de PDFs
@@ -184,7 +183,7 @@ streamlit run app.py
 │   └── estructurador.py      # Arquitecto de documentos
 │
 ├── 🔄 Workflows (flows/)
-│   └── documento_flow.py     # Orquestación del flujo CrewAI
+│   └── documento_flow.py     # Orquestación del flujo CrewAI Flows
 │
 ├── 🛠️ Tools (tools/)
 │   ├── file_tools.py         # Manipulación de archivos
@@ -207,20 +206,23 @@ streamlit run app.py
 - **Rol:** Arquitecto de Documentos Técnicos
 - **Función:** Crea estructura lógica y profesional en Markdown
 - **Especialidad:** Organización jerárquica del contenido
+- **Mejora en Flows:** Se ejecuta una sola vez al inicio del flujo
 
 ### 🔍 Agente Buscador (`buscador.py`)
 - **Investigador Digital:** Búsqueda de información técnica con `buscar_web`
 - **Especialista en Imágenes:** Descarga imágenes relevantes con `buscar_y_descargar_imagen`
 - **Especialidad:** Investigación web inteligente y curación de contenido visual
+- **Mejora en Flows:** Se crea un agente fresco para cada sección, evitando contaminación de contexto
 
 ### ✍️ Agente Escritor (`escritor.py`)
 - **Rol:** Redactor Técnico Especializado en Español
 - **Función:** Redacción profesional y añadir contenido con `append_to_markdown`
 - **Especialidad:** Escritura técnica de alta calidad en español
+- **Mejora en Flows:** Se crea un agente fresco para cada sección, garantizando contenido independiente
 
-## 🔄 Flujo de Trabajo CrewAI
+## 🔄 Flujo de Trabajo CrewAI Flows
 
-El sistema sigue un proceso estructurado de 5 fases:
+El sistema utiliza la nueva arquitectura **CrewAI Flows** que proporciona un control de flujo más robusto y secuencial. El proceso se estructura en 5 fases bien definidas:
 
 ```mermaid
 graph TD
@@ -232,13 +234,42 @@ graph TD
 ```
 
 1. **🧹 Limpieza y Preparación**: Limpia carpetas temporales y prepara el entorno
-2. **📋 Estructuración**: Genera la arquitectura del documento en Markdown
-3. **🔍 Procesamiento de Secciones**: Para cada sección → investigar + redactar
-4. **🖼️ Imagen de Portada**: Descarga imagen relevante al tema
+2. **📋 Estructuración**: Genera la arquitectura del documento en Markdown usando agente estructurador
+3. **🔍 Procesamiento de Secciones**: Para cada sección → crea agentes frescos → investigar + redactar
+4. **🖼️ Imagen de Portada**: Descarga imagen relevante al tema usando herramientas de búsqueda
 5. **📄 Compilación**: Convierte Markdown a PDF profesional con imágenes
-6. **📁 Organización**: Mueve archivos y genera estadísticas del proceso
+6. **📁 Organización**: Mueve archivos a `output/` y genera estadísticas del proceso
 
-**Estado gestionado por `DocumentoState`**: tema, estructura, secciones, imagen, ruta PDF final.
+**Estado gestionado por `DocumentoState`**: tema, modelo, estructura, secciones, imagen, ruta PDF final.
+
+### 📋 DocumentoState - Gestión de Estado Centralizada
+
+El estado del flujo se gestiona a través de una clase `DocumentoState` que hereda de Pydantic BaseModel:
+
+```python
+class DocumentoState(BaseModel):
+    topic: str = ""                    # Tema del documento
+    modelo: str | None = None          # Modelo LLM seleccionado  
+    estructura_completa: str = ""      # Estructura generada en Markdown
+    secciones_lista: list[str] = []    # Lista de secciones extraídas
+    total_secciones: int = 0           # Contador de secciones
+    archivo_markdown: str = "temp/temp_markdown.md"  # Archivo temporal
+    imagen_portada: str = ""           # Ruta de imagen descargada
+    pdf_final: str = ""                # Ruta del PDF generado
+```
+
+Esta gestión centralizada del estado permite:
+- ✅ **Persistencia entre pasos**: Los datos se mantienen durante todo el flujo
+- ✅ **Validación automática**: Pydantic valida tipos y formatos
+- ✅ **Trazabilidad**: Cada paso puede acceder y modificar el estado
+- ✅ **Debugging mejorado**: Fácil inspección del estado en cualquier momento
+
+### Ventajas de CrewAI Flows
+- ✅ **Control de flujo robusto**: Manejo de estados y transiciones automáticas
+- ✅ **Ejecución secuencial garantizada**: Cada paso se completa antes del siguiente
+- ✅ **Gestión de errores mejorada**: Mejor manejo de excepciones entre pasos
+- ✅ **Escalabilidad**: Fácil adición de nuevos pasos al flujo
+- ✅ **Monitoreo**: Logs detallados de cada fase del proceso
 
 ## 🛠️ Herramientas Personalizadas
 
@@ -248,6 +279,8 @@ graph TD
 | `generar_pdf_desde_markdown()` | Convierte Markdown → PDF profesional | `tools/pdf_tool.py` |
 | `buscar_web()` | Búsquedas inteligentes con Serper API | `tools/search_tools.py` |
 | `buscar_y_descargar_imagen()` | Descarga imágenes relevantes | `tools/search_tools.py` |
+| `_buscar_imagen_base()` | Función base para búsqueda de imágenes | `tools/search_tools.py` |
+| `_generar_pdf_base()` | Función base para generación de PDF | `tools/pdf_tool.py` |
 
 ## ⚙️ Utilidades del Sistema
 
@@ -258,6 +291,14 @@ graph TD
 | `obtener_modelos_disponibles_ollama()` | Lista modelos instalados | `utils/llm_selector.py` |
 | `seleccionar_llm()` | Auto-selecciona mejor modelo disponible | `utils/llm_selector.py` |
 
+### Nuevas Características de la Arquitectura
+
+- **🔄 CrewAI Flows**: Utiliza la nueva arquitectura de flows para un control de flujo más robusto
+- **📊 Estado Centralizado**: `DocumentoState` gestiona todo el estado del flujo con BaseModel de Pydantic
+- **🔗 Decoradores de Flow**: `@start()` y `@listen()` para definir transiciones entre pasos
+- **🎯 Agentes Frescos**: Cada sección crea agentes nuevos para evitar contaminación de estado
+- **📈 Logging Mejorado**: Seguimiento detallado de cada fase del proceso
+
 ---
 
-**¡Listo para generar PDFs con IA! 🚀**
+**¡Listo para generar PDFs con IA usando CrewAI Flows! 🚀**
