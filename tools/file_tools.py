@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import json
 import codecs
 from pathlib import Path
 from crewai.tools import tool
@@ -12,34 +11,24 @@ def append_to_markdown(content: str, **kwargs) -> str:
     """
     Herramienta simplificada para añadir contenido markdown al final de temp/temp_markdown.md.
 
-    Esta versión detecta si el parámetro `content` es un JSON válido con una clave "content"
-    y, en ese caso, extrae sólo ese valor; de lo contrario, añade el texto tal cual.
+    Esta versión añade directamente el contenido recibido, sin intentar parsearlo como JSON.
 
     Args:
-        content (str): Contenido markdown a añadir (o bien un JSON con clave "content").
+        content (str): Contenido markdown a añadir.
         **kwargs: Parámetros adicionales (se ignoran en esta versión).
 
     Returns:
         str: Mensaje de confirmación con estadísticas básicas.
     """
 
-    # Intento de parsear `content` como JSON
-    try:
-        data = json.loads(content)
-        if isinstance(data, dict) and "content" in data:
-            full_content = data["content"]
-        else:
-            # Si no es un dict con "content", uso el texto tal cual
-            full_content = content
-    except json.JSONDecodeError:
-        # Si no es JSON, añado el texto directamente
-        full_content = content
+    # Tomar el contenido tal cual, sin parsear JSON
+    full_content = content
 
-    # Ruta al archivo temp/temp_markdown.md (igual que antes)
+    # Ruta al archivo temp/temp_markdown.md
     file_path = Path("temp") / "temp_markdown.md"
     os.makedirs(file_path.parent, exist_ok=True)
 
-    # Escribo el contenido extraído (o el original) al final del fichero
+    # Escribir el contenido al final del fichero
     with codecs.open(file_path, "a", "utf-8") as f:
         f.write(full_content)
         f.write("\n")
