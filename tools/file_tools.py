@@ -7,19 +7,24 @@ from crewai.tools import tool
 from pathlib import Path
 
 @tool("append_to_markdown")
-def append_to_markdown(content: str) -> str:
+def append_to_markdown(content: str, **kwargs) -> str:
     """
     Herramienta simplificada para añadir contenido markdown al final de temp/temp_markdown.md.
     
     Args:
         content (str): Contenido markdown a añadir.
+        **kwargs: Parámetros adicionales que se concatenarán al contenido.
     
     Returns:
         str: Mensaje de confirmación con estadísticas básicas.
     """
-    # Asegurarse de que content sea cadena
-    if not isinstance(content, str):
-        content = str(content)
+
+    # Concatenar todos los parámetros adicionales al contenido principal
+    full_content = content
+    if kwargs:
+        for key, value in kwargs.items():
+            if isinstance(value, str) and value.strip():
+                full_content += f" {value}"
 
     # Ruta al archivo markdown
     temp_dir = os.path.join("temp")
@@ -29,11 +34,11 @@ def append_to_markdown(content: str) -> str:
     try:
         os.makedirs(temp_dir, exist_ok=True)
         with codecs.open(file_path, 'a', encoding='utf-8') as f:
-            f.write(f"\n\n{content}\n\n")
+            f.write(f"\n\n{full_content}\n\n")
 
         # Calcular estadísticas simples
-        added_words = len(content.split())
-        added_lines = len(content.splitlines())
+        added_words = len(full_content.split())
+        added_lines = len(full_content.splitlines())
 
         with codecs.open(file_path, 'r', encoding='utf-8') as f:
             full = f.read()
