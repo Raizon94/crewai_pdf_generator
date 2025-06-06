@@ -35,10 +35,10 @@ def crear_llm_crewai(modelo_seleccionado=None):
             temperature=0.3,  # Menor para respuestas más consistentes
             timeout=600,  # 10 minutos timeout
             # CONFIGURACIONES ADICIONALES
-            top_p=0.9,
             repetition_penalty=1.1,
-            system_template="",
-            prompt_template="{{user_input}}"
+            #system_template="",
+            #prompt_template="{{user_input}}"
+            think=False
         )
         
         return llm

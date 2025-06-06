@@ -45,12 +45,13 @@ def crear_agente_escritor(modelo: str = None) -> Agent:
             asegurando que cada sección cumple con los requisitos de longitud y contiene información
             relevante y rigurosa sobre el tema.
             Lo único que debes hacer es usar la herramienta append_to_markdown para añadir el contenido que redactes. Recuerda que solo has de usarla al final pasándole el contenido como String.
+            ATENCIÓN: SOLO USAR LA HERRAMIENTA 1 VEZ AL FINAL PARA NO AÑADIR CONTENIDO INCOMPLETO.
             """,
             llm=llm,
             tools=[append_to_markdown],
             verbose=True,
             allow_delegation=False,
-            max_iter=5,
+            max_iter=1,
             max_execution_time=600
         )
         

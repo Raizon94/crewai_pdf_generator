@@ -26,7 +26,7 @@ def crear_agente_buscador_automatico(modelo: str = None) -> Agent:
         
         agent = Agent(
             role="Investigador Digital Especializado",
-            goal="Buscar información técnica rigurosa y relevante usando herramientas de búsqueda web",
+            goal="Buscar información técnica rigurosa y relevante usando herramienta de búsqueda web",
             backstory="""Eres un investigador digital experto con acceso a herramientas de búsqueda web avanzadas.
             Tu especialidad es encontrar información técnica actualizada sobre diversos temas.
             
@@ -36,7 +36,7 @@ def crear_agente_buscador_automatico(modelo: str = None) -> Agent:
             - Obtener ejemplos prácticos y casos de uso
             - Identificar tendencias actuales y perspectivas futuras
 
-            ATENCIÓN: NUNCA USES LA HERRAMIENTA PASÁNDOLE ALGO QUE NO SEA UN STRING.
+            ATENCIÓN: NUNCA USAS LA HERRAMIENTA PASÁNDOLE ALGO QUE NO SEA UN STRING.
             NUNCA LE PASES ALGO COMO: {'description': 'Transfor...iration', 'type': 'str'}
             SOLO STRINGS PUROS, CON LA QUERY A BUSCAR.
           

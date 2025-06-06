@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# proyecto_crewai/flows/documento_flow.py (FLUJO CORREGIDO)
+# proyecto_crewai/flows/documento_flow.py
 
 import os
 import sys
 import shutil
-import re
-from crewai.flow.flow import Flow, start, listen, router
-from crewai import Crew, Process, Agent, Task
+from crewai.flow.flow import Flow, start, listen
+from crewai import Crew, Process
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,265 +20,247 @@ except ImportError as e:
     print(f"[ERROR] No se pudieron importar las dependencias: {e}")
     sys.exit(1)
 
+
 # ==================== ESTADO DEL FLUJO ====================
 
 class DocumentoState(BaseModel):
     topic: str = ""
-    modelo: str | None = None  # Corregido para permitir None en un campo str
+    modelo: str | None = None
     estructura_completa: str = ""
-    secciones_lista: list = []
-    seccion_actual: int = 0
-    archivo_markdown: str = "temp/temp_markdown.md"
-    imagen_portada: str = "temp/temp_image.jpg"
-    pdf_final: str = ""
+    secciones_lista: list[str] = []
     total_secciones: int = 0
-    contenido_antes_seccion: str = ""
+    archivo_markdown: str = "temp/temp_markdown.md"
+    imagen_portada: str = ""
+    pdf_final: str = ""
 
 
-# ==================== FLOW CORREGIDO ====================
+# ==================== FLOW COMPLETO ====================
 
 class DocumentoFlowCompleto(Flow[DocumentoState]):
-    
+
     @start()
     def limpiar_y_crear_estructura_documento(self):
-        """Paso 1: Limpiar temp y crear estructura del documento"""
+        """Paso 1: Limpiar carpeta temp, generar estructura y extraer lista de secciones."""
         print(f"🚀 INICIANDO FLUJO DE DOCUMENTACIÓN COMPLETO")
         print(f"📋 Tema: {self.state.topic}")
-        
-        # LIMPIAR CARPETA TEMP
-        print(f"\n🧹 LIMPIEZA INICIAL - Eliminando contenido de carpeta temp")
+
+        # 1. Limpiar carpeta temp
         if os.path.exists("temp"):
             try:
                 shutil.rmtree("temp")
-                print(f"🗑️ Carpeta temp eliminada completamente")
+                print("🗑️ Carpeta 'temp' eliminada completamente.")
             except Exception as e:
-                print(f"⚠️ Error eliminando carpeta temp: {e}")
-        
-        # Crear carpeta temp limpia
+                print(f"⚠️ Error eliminando carpeta 'temp': {e}")
+
+        # 2. Crear carpeta temp vacía
         os.makedirs("temp", exist_ok=True)
-        print(f"📁 Carpeta temp creada limpia")
-        
-        print(f"\n📋 PASO 1: ESTRUCTURADOR - Creando estructura del documento")
-        
-        # Usar agente estructurador
-        agente = crear_agente_estructurador(self.state.modelo)
-        tarea = crear_tarea_estructurar(self.state.topic, agente)
-        
-        crew = Crew(
-            agents=[agente],
-            tasks=[tarea],
+        print("📁 Carpeta 'temp' creada limpia.")
+
+        # 3. Invocar agente estructurador para obtener la estructura completa
+        print("\n📋 PASO 1: ESTRUCTURADOR - Generando esquema del documento")
+        agente_estructurador = crear_agente_estructurador(self.state.modelo)
+        tarea_estructurar = crear_tarea_estructurar(self.state.topic, agente_estructurador)
+
+        crew_estruct = Crew(
+            agents=[agente_estructurador],
+            tasks=[tarea_estructurar],
             process=Process.sequential,
             verbose=True
         )
-        
-        resultado = crew.kickoff(inputs={"topic": self.state.topic})
-        self.state.estructura_completa = resultado.raw if hasattr(resultado, 'raw') else str(resultado)
-        
-        # Extraer lista de secciones para iterar
-        secciones = []
-        for line in self.state.estructura_completa.split('\n'):
-            if line.strip().startswith('## ') and not line.strip().startswith('### '):
-                seccion = line.strip()[3:].strip()
-                # Filtrar secciones numéricas y referencias
-                if seccion and not seccion.lower().startswith('referencias') and not seccion.lower().startswith('conclusiones'):
-                    # Limpiar numeración si existe
-                    if seccion.split('.')[0].strip().isdigit():
-                        seccion = '.'.join(seccion.split('.')[1:]).strip()
-                    if seccion:
-                        secciones.append(seccion)
-        
+        resultado = crew_estruct.kickoff(inputs={"topic": self.state.topic})
+        self.state.estructura_completa = resultado.raw if hasattr(resultado, "raw") else str(resultado)
+
+        # 4. Extraer todas las cabeceras '## ' (nivel 2) excepto 'Referencias' y 'Conclusiones'
+        secciones: list[str] = []
+        for line in self.state.estructura_completa.split("\n"):
+            text = line.strip()
+            if text.startswith("## ") and not text.startswith("### "):
+                título = text[3:].strip()
+                título_min = título.lower()
+                if título and not (título_min.startswith("referencias") or título_min.startswith("conclusiones")):
+                    # Filtrar numeración del tipo "1. Introducción"
+                    partes = título.split(".", 1)
+                    if partes[0].strip().isdigit() and len(partes) > 1:
+                        título = partes[1].strip()
+                    secciones.append(título)
         self.state.secciones_lista = secciones
         self.state.total_secciones = len(secciones)
-        self.state.seccion_actual = 0
-        
-        # Inicializar archivo temporal con título
-        titulo_documento = f"# {self.state.topic}\n\n"
+
+        print(f"\n✅ Estructura detectada con {self.state.total_secciones} secciones:")
+        for i, s in enumerate(self.state.secciones_lista, start=1):
+            print(f"   {i}. {s}")
+
+        # 5. Inicializar archivo Markdown con el título principal
         try:
-            with open(self.state.archivo_markdown, 'w', encoding='utf-8') as f:
-                f.write(titulo_documento)
-            print(f" Archivo temporal iniciado con título: {self.state.archivo_markdown}")
+            os.makedirs(os.path.dirname(self.state.archivo_markdown), exist_ok=True)
+            with open(self.state.archivo_markdown, "w", encoding="utf-8") as f:
+                f.write(f"# {self.state.topic}\n\n")
+            print(f"📄 Archivo Markdown iniciado en: {self.state.archivo_markdown}")
         except Exception as e:
-            print(f"Error escribiendo título en archivo temporal: {e}")
-        
-        print(f"✅ Estructura creada con {self.state.total_secciones} secciones:")
-        for i, seccion in enumerate(secciones, 1):
-            print(f"   {i}. {seccion}")
-        
-        # CORRECCIÓN: Cambiar el return para evitar conflictos de nombres
-        return "continuar_siguiente_seccion"
-    
+            print(f"⚠️ Error escribiendo el archivo Markdown: {e}")
+
+        # Pasar al procesamiento de todas las secciones
+        return "procesar_seccion"
+
     @listen(limpiar_y_crear_estructura_documento)
-    def procesar_seccion_individual(self, _):
-        """Paso 2: Procesar todas las secciones de golpe, en orden."""
-        print(f"\nPASO 2: PROCESAMIENTO DE TODAS LAS SECCIONES DE GOLPE")
+    def procesar_seccion(self, _):
+        """Paso 2: Iterar por cada sección, creando agentes frescos y ejecutando investigación + redacción."""
+        print(f"\n📝 PASO 2: Procesando todas las secciones, una por una")
 
-        # 1) Si ya procesamos todo, saltamos
-        if not self.state.secciones_lista:
-            print("✅ No hay secciones para procesar.")
-            return "todas_secciones_completadas"
-
-
-        tasks = []
-
-        # 3) Para cada sección, creamos:
-        #    - Una tarea de investigación con nombre único "investigar_{i}"
-        #    - Una tarea de redacción "redactar_{i}", que dependa de la anterior
         for idx, seccion in enumerate(self.state.secciones_lista):
+            print(f"   ▶️ Procesando sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
+
+            # 1) Crear un agente de búsqueda y otro de redacción frescos para esta sección
             agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo)
             agente_escritor = crear_agente_escritor(modelo=self.state.modelo)
-            # ======= TAREA DE INVESTIGACIÓN =======
+
+            # 2) Tarea de investigación
             tarea_inv = crear_tarea_investigacion_automatica(
                 seccion,
                 self.state.topic,
                 agente_buscador
             )
-            # Nombre único para organización
             tarea_inv.name = f"investigar_{idx}"
-            tasks.append(tarea_inv)
 
-            # ======= TAREA DE REDACCIÓN =======
+            # 3) Tarea de redacción, que depende de la investigación previa
             tarea_red = crear_tarea_redaccion_archivo(
                 agente_escritor,
                 seccion,
                 self.state.topic
             )
             tarea_red.name = f"redactar_{idx}"
-            # Establezco contexto para que espere a la investigación previa
             tarea_red.context = [tarea_inv]
-            tasks.append(tarea_red)
 
-        # 4) Creo el Crew con todas las tareas en secuencia
-        crew_seccion = Crew(
-            agents=[agente_buscador, agente_escritor],
-            tasks=tasks,
-            process=Process.sequential,
-            verbose=True
-        )
+            # 4) Armar un Crew secuencial para esta sección
+            crew_seccion = Crew(
+                agents=[agente_buscador, agente_escritor],
+                tasks=[tarea_inv, tarea_red],
+                process=Process.sequential,
+                verbose=True
+            )
 
-        # 5) Arranco el crew - el agente decidirá automáticamente cuándo usar herramientas
-        crew_seccion.kickoff()
+            # 5) Ejecutar investigación + redacción
+            resultado = crew_seccion.kickoff()
+            # NOTA: Se asume que el agente escritor, usando sus herramientas internas
+            #       (por ejemplo append_to_markdown), añade directamente el contenido
+            #       al archivo Markdown. No se hace escritura explícita aquí.
 
-        # 6) Marcamos como completado: ya hicimos todo de golpe
+        # Una vez procesadas todas las secciones, avanzamos al siguiente paso
         return "todas_secciones_completadas"
-    
-    
 
-    @listen(procesar_seccion_individual)
+    @listen(procesar_seccion)
     def buscar_imagen_portada(self, _):
-        """Paso 3: Buscar imagen de portada"""
-        print(f"\nPASO 3: BÚSQUEDA DE IMAGEN - Buscando imagen de portada")
-        print(f"Secciones procesadas: {self.state.seccion_actual}/{self.state.total_secciones}")
-        
+        """Paso 3: Buscar imagen de portada para el documento completo."""
+        print(f"\n🖼️ PASO 3: BÚSQUEDA DE IMAGEN - Buscando imagen de portada para '{self.state.topic}'")
+        print(f"Secciones procesadas: {self.state.total_secciones}/{self.state.total_secciones}")
+
         try:
             imagen_path = _buscar_imagen_base(self.state.topic)
             if imagen_path and "descargada:" in imagen_path:
-                filename = imagen_path.split(":")[-1].strip()
+                filename = imagen_path.split(":", 1)[-1].strip()
                 if os.path.exists(filename):
                     self.state.imagen_portada = filename
-                    print(f"🖼️ Imagen de portada descargada: {filename}")
+                    print(f"✅ Imagen de portada descargada: {filename}")
                 else:
-                    print(f"⚠️ No se pudo encontrar imagen descargada: {filename}")
+                    print(f"⚠️ No se encontró la imagen descargada: {filename}")
                     self.state.imagen_portada = ""
             else:
-                print(f"⚠️ No se pudo descargar imagen para: {self.state.topic}")
+                print(f"⚠️ No fue posible descargar imagen para: {self.state.topic}")
                 self.state.imagen_portada = ""
         except Exception as e:
-            print(f"Error buscando imagen: {e}")
+            print(f"⚠️ Error buscando imagen de portada: {e}")
             self.state.imagen_portada = ""
-        
+
         return "imagen_buscada"
-    
+
     @listen(buscar_imagen_portada)
     def compilar_documento_final(self, _):
-        """Paso 4: COMPILACIÓN FINAL - Crear PDF con imagen de portada"""
-        print(f"\nPASO 4: COMPILACIÓN FINAL - Creando PDF")
-        
+        """Paso 4: Compilar el Markdown completo en un PDF, incluyendo la portada."""
+        print(f"\n📄 PASO 4: COMPILACIÓN FINAL - Generando PDF")
+
         if not os.path.exists(self.state.archivo_markdown):
-            print(f" Error: Archivo markdown no existe: {self.state.archivo_markdown}")
+            print(f"⚠️ Error: El archivo Markdown no existe: {self.state.archivo_markdown}")
             return "error_compilacion"
-        
+
         try:
-            with open(self.state.archivo_markdown, 'r', encoding='utf-8') as f:
+            with open(self.state.archivo_markdown, "r", encoding="utf-8") as f:
                 contenido_markdown = f.read()
-            
-            print(f"📄 Generando PDF directamente...")
+
+            print("📑 Generando PDF a partir del Markdown...")
             pdf_path = _generar_pdf_base(
-                contenido_markdown, 
-                self.state.imagen_portada, 
+                contenido_markdown,
+                self.state.imagen_portada,
                 "temp/final_documento.pdf"
             )
-            
+
             if pdf_path and os.path.exists(pdf_path):
                 self.state.pdf_final = pdf_path
-                print(f"PDF final generado: {self.state.pdf_final}")
+                print(f"✅ PDF generado: {self.state.pdf_final}")
             else:
-                print(f"Error generando PDF")
-            
+                print("⚠️ Error al generar el PDF.")
+                return "error_compilacion"
+
         except Exception as e:
-            print(f" Error en compilación final: {e}")
+            print(f"⚠️ Excepción al compilar el PDF: {e}")
             return "error_compilacion"
-        
+
         return "documento_completado"
-    
+
     @listen(compilar_documento_final)
     def mover_pdf_y_mostrar_estadisticas_finales(self, _):
-        """Paso 5: Mover PDF a carpeta output y mostrar estadísticas finales"""
-        print(f"\nPASO 5: ORGANIZACIÓN FINAL - Moviendo PDF a carpeta output")
-        
+        """Paso 5: Mover el PDF a 'output/' y mostrar estadísticas del flujo."""
+        print(f"\n🚚 PASO 5: ORGANIZACIÓN FINAL - Moviendo PDF a carpeta 'output'")
+
         os.makedirs("output", exist_ok=True)
-        
-        topic_clean = self.state.topic.replace(' ', '_').replace('/', '_').replace('\\', '_')
-        pdf_final_name = f"{topic_clean}.pdf"
-        pdf_output_path = f"output/{pdf_final_name}"
-        
+        topic_clean = self.state.topic.replace(" ", "_").replace("/", "_").replace("\\", "_")
+        destino = f"output/{topic_clean}.pdf"
+
         if self.state.pdf_final and os.path.exists(self.state.pdf_final):
             try:
-                shutil.move(self.state.pdf_final, pdf_output_path)
-                self.state.pdf_final = pdf_output_path
-                print(f"PDF movido a: {pdf_output_path}")
+                shutil.move(self.state.pdf_final, destino)
+                self.state.pdf_final = destino
+                print(f"✅ PDF movido a: {destino}")
             except Exception as e:
-                print(f"Error moviendo PDF: {e}")
-        
-        # Mostrar estadísticas finales
-        print(f"\n" + "="*80)
-        print(f"FLUJO COMPLETO FINALIZADO")
-        print(f"="*80)
+                print(f"⚠️ Error moviendo PDF: {e}")
+
+        print("\n" + "=" * 60)
+        print("🎉 FLUJO COMPLETO FINALIZADO")
+        print("=" * 60)
         print(f"Tema del documento: {self.state.topic}")
         print(f"Total de secciones procesadas: {self.state.total_secciones}")
-        
+
         if os.path.exists(self.state.archivo_markdown):
-            with open(self.state.archivo_markdown, 'r', encoding='utf-8') as f:
+            with open(self.state.archivo_markdown, "r", encoding="utf-8") as f:
                 contenido = f.read()
-                palabras = len(contenido.split())
-                lineas = len(contenido.split('\n'))
-            print(f"📊 Estadísticas del documento:")
+            palabras = len(contenido.split())
+            lineas = len(contenido.split("\n"))
+            print("📊 Estadísticas del documento:")
             print(f"   • Palabras: {palabras}")
             print(f"   • Líneas: {lineas}")
-        
+
         if self.state.pdf_final and os.path.exists(self.state.pdf_final):
-            print(f"📄 PDF final: {self.state.pdf_final}")
             size_bytes = os.path.getsize(self.state.pdf_final)
             size_mb = size_bytes / (1024 * 1024)
+            print(f"📄 PDF final: {self.state.pdf_final}")
             print(f"   • Tamaño: {size_bytes} bytes ({size_mb:.2f} MB)")
-        
-        print(f"Flujo completo finalizado exitosamente")
-        print(f"="*80)
+
+        print("=" * 60)
+        return None  # Final del flujo
+
 
 # ==================== FUNCIÓN PRINCIPAL ====================
 
 def main():
-    """Función principal para ejecutar el flujo completo corregido"""
+    """Función principal para ejecutar el flujo completo."""
     topic = "Inteligencia Artificial en la Medicina"
-    
+
     flow = DocumentoFlowCompleto()
     flow.state.topic = topic
-    
-    print(f"INICIANDO FLUJO DE DOCUMENTACIÓN CORREGIDO")
-    print(f"Tema: {topic}")
-    
+
+    print("=== INICIANDO FLUJO DE DOCUMENTACIÓN CORREGIDO ===")
     flow.kickoff()
-    
-    print("FLOW COMPLETADO CORRECTAMENTE")
+    print("=== FLUJO COMPLETADO CORRECTAMENTE ===")
+
 
 if __name__ == "__main__":
     main()
