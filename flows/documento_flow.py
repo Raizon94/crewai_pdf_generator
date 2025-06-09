@@ -72,14 +72,14 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
         resultado = crew_estruct.kickoff(inputs={"topic": self.state.topic})
         self.state.estructura_completa = resultado.raw if hasattr(resultado, "raw") else str(resultado)
 
-        # 4. Extraer todas las cabeceras '## ' (nivel 2) excepto 'Referencias' y 'Conclusiones'
+        # 4. Extraer todas las cabeceras '## ' (nivel 2) excepto 'Referencias'
         secciones: list[str] = []
         for line in self.state.estructura_completa.split("\n"):
             text = line.strip()
             if text.startswith("## ") and not text.startswith("### "):
                 título = text[3:].strip()
                 título_min = título.lower()
-                if título and not (título_min.startswith("referencias") or título_min.startswith("conclusiones")):
+                if título and not título_min.startswith("referencias"):
                     # Filtrar numeración del tipo "1. Introducción"
                     partes = título.split(".", 1)
                     if partes[0].strip().isdigit() and len(partes) > 1:
