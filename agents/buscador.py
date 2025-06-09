@@ -4,15 +4,13 @@
 import os
 import sys
 from crewai import Agent, Task
-# AÑADIR IMPORT PARA SERPER DEV TOOL
-from crewai_tools import SerperDevTool
 
 # Añadir el directorio padre al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from utils.llm_provider import crear_llm_crewai
-    from tools.search_tools import buscar_web, buscar_y_descargar_imagen
+    from tools.search_tools import buscar_web  # Herramienta personalizada con control
 except ImportError:
     print("[ERROR] No se pudieron importar las dependencias necesarias")
     sys.exit(1)
@@ -22,6 +20,7 @@ except ImportError:
 def crear_agente_buscador_automatico(modelo: str = None, llm_instance=None) -> Agent:
     """
     Crea agente buscador que usa automáticamente las @tools según su criterio (ReAct)
+    Versión CONTROLADA para evitar loops infinitos
     """
     try:
         # Usar LLM pasado como parámetro o crear uno nuevo si no se proporciona
@@ -30,22 +29,29 @@ def crear_agente_buscador_automatico(modelo: str = None, llm_instance=None) -> A
         else:
             llm = crear_llm_crewai(modelo_seleccionado=modelo)
         
-        # INICIALIZAR SERPER DEV TOOL (lee SERPER_API_KEY del .env automáticamente)
-        search_tool = SerperDevTool()
-        
+        # USAR HERRAMIENTAS PERSONALIZADAS EN LUGAR DE SERPERDEVTOOL
+        # Esto nos da más control sobre el comportamiento
         agent = Agent(
             role="Investigador Digital Especializado",
-            goal="Buscar información técnica rigurosa y relevante usando herramienta de búsqueda web",
+            goal="Buscar información técnica rigurosa y relevante usando herramienta de búsqueda web UNA SOLA VEZ",
             backstory="""Eres un investigador digital experto con acceso a herramientas de búsqueda web avanzadas.
             Tu especialidad es encontrar información técnica actualizada sobre diversos temas.
+            
+            INSTRUCCIONES CRÍTICAS:
+            - Realiza UNA SOLA búsqueda web por tarea
+            - Una vez que obtengas resultados, analízalos y proporciona un resumen
+            - NO busques múltiples veces
+            - Si los primeros resultados son suficientes, NO busques más
+            - Tu objetivo es ser eficiente, no exhaustivo
+            - Después de usar la herramienta de búsqueda UNA VEZ, proporciona tu análisis final
             """,
             llm=llm,
-            # CAMBIAR tools=[buscar_web] POR LA TOOL OFICIAL:
-            tools=[search_tool],  # SerperDevTool en lugar de buscar_web
+            # USAR HERRAMIENTA PERSONALIZADA EN LUGAR DE SERPERDEVTOOL
+            tools=[buscar_web],  # Herramienta personalizada con más control
             verbose=True,
             allow_delegation=False,
-            max_iter=3,
-            max_execution_time=300
+            max_iter=1,  # SOLO UNA ITERACIÓN para evitar loops
+            max_execution_time=120  # TIEMPO LIMITADO
         )
         
         return agent
@@ -63,16 +69,36 @@ def crear_tarea_investigacion_automatica(seccion: str, topic: str, agent: Agent)
             description=f"""
             Investigar sobre: "{seccion}" relacionado con {topic}.
 
-            OBJETIVO:
-            Buscar información técnica, estadísticas y ejemplos sobre "{seccion}".
-            # NOTA: El agente ahora usará SerperDevTool automáticamente para buscar en Internet
-            Investiga a fondo y recopila datos relevantes sobre este tema usando tu herramienta de búsqueda para buscar en Internet.
+            PROCESO ESPECÍFICO Y OBLIGATORIO:
+            1. Realiza UNA búsqueda web sobre "{seccion}" en el contexto de {topic} usando la herramienta buscar_web
+            2. Analiza los resultados obtenidos de esa ÚNICA búsqueda
+            3. Extrae los puntos clave más relevantes de esos resultados
+            4. Finaliza tu tarea con un resumen - NO busques más información
+
+            RESTRICCIONES CRÍTICAS:
+            - MÁXIMO 1 uso de la herramienta buscar_web
+            - NO realices búsquedas adicionales bajo ninguna circunstancia
+            - Trabaja únicamente con los resultados de la primera búsqueda
+            - Tu respuesta final debe ser un análisis de lo encontrado, no más búsquedas
+
+            CONSULTA PARA BUSCAR: "{seccion} {topic}"
             """,
             expected_output=f"""
-            Hechos y datos útiles sobre "{seccion}".
+            Resumen conciso sobre "{seccion}" basado en UNA ÚNICA búsqueda web:
             
-            Aproximadamente 50-150 palabras: SOLO PUNTOS CLAVE
-            Traduce la investigación que recuperes al idioma español si es necesario.
+            - 3-5 puntos clave específicos sobre el tema
+            - Datos técnicos o estadísticas relevantes (si están disponibles)
+            - Ejemplos concretos relacionados con {topic}
+            - Texto en ESPAÑOL, aproximadamente 50-150 palabras
+            
+            FORMATO REQUERIDO:
+            "Información encontrada sobre [seccion]:
+            • Punto clave 1
+            • Punto clave 2  
+            • Punto clave 3
+            [etc.]"
+            
+            IMPORTANTE: Este es tu resultado final - NO busques más información.
             """,
             agent=agent
         )

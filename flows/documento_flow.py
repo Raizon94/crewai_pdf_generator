@@ -168,7 +168,9 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
             agents=[agente_buscador, agente_escritor],
             tasks=all_tasks,
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            max_execution_time=1800,  # 30 minutos máximo para todo el crew
+            step_callback=lambda step: print(f"[CREW STEP] {step.tool_name if hasattr(step, 'tool_name') else 'Procesando...'}")
         )
 
         # Ejecutamos el Crew una sola vez.
