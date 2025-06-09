@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import random
 from flows.documento_flow import DocumentoFlowCompleto, DocumentoState
-from utils.llm_selector import obtener_modelos_disponibles_ollama
+from utils.llm_selector import obtener_modelos_disponibles_lmstudio
 
 st.set_page_config(page_title="Generador de PDF CrewAI", layout="centered")
 st.title("📄 Generador de PDF CrewAI")
@@ -61,9 +61,9 @@ st.markdown("""
 # --------------------------------------------------------
 # Paso 1: Obtener la lista de modelos disponibles
 # --------------------------------------------------------
-modelos = obtener_modelos_disponibles_ollama()
+modelos = obtener_modelos_disponibles_lmstudio()
 if not modelos:
-    st.error("No se encontraron modelos Ollama instalados. ¿Está corriendo el demonio y tienes modelos descargados?")
+    st.error("No se encontraron modelos en LM Studio. ¿Está corriendo LM Studio y tienes modelos cargados?")
     st.stop()
 
 # --------------------------------------------------------
@@ -92,7 +92,7 @@ with st.form(key="form_pdf"):
         modelos,
         index=modelos.index(st.session_state["modelo_llm"]),
         key="modelo_llm",
-        help="Elige el modelo Ollama que tienes descargado."
+        help="Elige el modelo de LM Studio que tienes cargado."
     )
     topic = st.text_input(
         "Tópico del documento",
@@ -114,7 +114,7 @@ if submit and not st.session_state["generando"]:
     # con session_state["modelo_llm"] y session_state["topic_input"] actualizados.
 
 # --------------------------------------------------------
-# Paso 5: Si estamos en modo “generando”, mostramos spinner + info
+# Paso 5: Si estamos en modo "generando", mostramos spinner + info
 # --------------------------------------------------------
 if st.session_state["generando"]:
     st.markdown("""
@@ -154,7 +154,7 @@ if st.session_state["generando"]:
             st.session_state["error_generacion"] = f"Error ejecutando el flujo: {e}"
             st.session_state["pdf_ok"] = False
 
-    # Terminó el “spinner”: desbloqueamos la UI
+    # Terminó el "spinner": desbloqueamos la UI
     st.session_state["generando"] = False
 
     # Si hubo error, lo mostramos y detenemos
@@ -187,7 +187,7 @@ campos_disabled = st.session_state["generando"]
 mostrar_info = st.checkbox("Mostrar información del modelo LLM", disabled=campos_disabled, key="mostrar_info_modelo")
 if mostrar_info:
     st.write(f"Modelo actual: {st.session_state.get('modelo_llm', 'Ninguno')}")
-    st.write("Puedes cambiar los modelos disponibles descargando más modelos con Ollama.")
+    st.write("Puedes cambiar los modelos disponibles cargando más modelos en LM Studio.")
 
 
 # --------------------------------------------------------

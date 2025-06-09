@@ -3,70 +3,63 @@
 
 import sys
 import random
+import requests
+import json
+import os
 
-# Intentamos importar el cliente de Ollama en Python. 
-# Si no está instalado, informamos al usuario.
-try:
-    import ollama
-except ImportError:
-    print(
-        "[ERROR] No se encontró el módulo 'ollama' en Python.\n"
-        "  • Instálalo con: pip install ollama\n"
-        "  • O revisa que tu entorno virtual contenga 'ollama'.",
-        file=sys.stderr
-    )
-    sys.exit(1)
-
-
-def obtener_modelos_disponibles_ollama():
+def obtener_modelos_disponibles_lmstudio():
     """
-    Llama al cliente de Ollama para obtener la lista de modelos
-    instalados localmente. Devuelve una lista de cadenas con los nombres de los modelos.
+    Llama a LM Studio para obtener la lista de modelos
+    disponibles. Devuelve una lista de cadenas con los nombres de los modelos.
     """
     try:
-        # Configurar host de Ollama (Docker o local)
-        import os
-        ollama_host = os.getenv('OLLAMA_HOST', 'localhost:11434')
-        if ollama_host.startswith('http'):
-            ollama_host = ollama_host.replace('http://', '').replace('https://', '')
+        # Configurar host de LM Studio (por defecto localhost:11434)
+        lmstudio_host = os.getenv('LMSTUDIO_HOST', 'localhost:11434')
+        if not lmstudio_host.startswith('http'):
+            lmstudio_host = f'http://{lmstudio_host}'
         
-        # Separar host y puerto
-        if ':' in ollama_host:
-            host, port = ollama_host.split(':')
-        else:
-            host, port = ollama_host, '11434'
+        # Hacer petición a la API de LM Studio
+        url = f"{lmstudio_host}/v1/models"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
         
-        # Configurar cliente con host personalizado
-        client = ollama.Client(host=f'http://{host}:{port}')
-        modelos_info = client.list()
-        
-        # La respuesta tiene un atributo 'models' que contiene una lista de objetos Model
-        modelos = [m.model for m in modelos_info.models]
+        # Parsear la respuesta JSON
+        data = response.json()
+        modelos = [model["id"] for model in data["data"]]
         return modelos
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] No se pudo conectar al servidor de LM Studio en {lmstudio_host}: {e}", file=sys.stderr)
+        return []
+    except (KeyError, json.JSONDecodeError) as e:
+        print(f"[ERROR] Respuesta inesperada del servidor LM Studio: {e}", file=sys.stderr)
+        return []
     except Exception as e:
-        # Puede fallar si el demonio no está corriendo o hay otro problema de conexión
-        print(f"[ERROR] No se pudo conectar al servidor de Ollama en {ollama_host}: {e}", file=sys.stderr)
+        print(f"[ERROR] Error inesperado al conectar con LM Studio: {e}", file=sys.stderr)
         return []
 
 
 def seleccionar_llm():
     """
-    Selecciona 'llama3:latest' si está en la lista de modelos disponibles.
+    Selecciona 'gemma3:4b' si está en la lista de modelos disponibles.
     Si no está, selecciona uno al azar de la lista (si la lista no está vacía).
-    Si no hay modelos instalados, lanza RuntimeError.
+    Si no hay modelos disponibles, lanza RuntimeError.
     """
-    modelos = obtener_modelos_disponibles_ollama()
+    modelos = obtener_modelos_disponibles_lmstudio()
     if not modelos:
         raise RuntimeError(
-            "No se encontró ningún modelo de Ollama instalado.\n"
-            "  • Asegúrate de tener el demonio de Ollama corriendo (ejecuta 'ollama serve').\n"
-            "  • Y/o que hayas descargado al menos un modelo (por ejemplo: 'ollama pull llama3:latest')."
+            "No se encontró ningún modelo en LM Studio.\n"
+            "  • Asegúrate de tener LM Studio corriendo en localhost:11434.\n"
+            "  • Y/o que hayas cargado al menos un modelo en LM Studio."
         )
-    if "gemma3:4b" in modelos:
-        return "gemma3:4b"
+    
+    # Buscar modelo preferido (ajusta el nombre según LM Studio)
+    modelo_preferido = "gemma3:4b"
+    if modelo_preferido in modelos:
+        return modelo_preferido
     else:
         elegido = random.choice(modelos)
-        print(f"[WARNING] 'gemma3:4b' no está instalado; usando modelo alternativo: {elegido}", file=sys.stderr)
+        print(f"[WARNING] '{modelo_preferido}' no está disponible; usando modelo alternativo: {elegido}", file=sys.stderr)
         return elegido
 
 

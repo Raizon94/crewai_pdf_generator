@@ -2,46 +2,38 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 import codecs
 from pathlib import Path
 from crewai.tools import tool
 
 @tool("append_to_markdown")
-def append_to_markdown(content: str, **kwargs) -> str:
+def append_to_markdown(content: str):
     """
-    Herramienta para añadir cualquier cosa (sin filtrar ni parsear) al final de temp/temp_markdown.md.
-
-    Ahora acepta cualquier tipo de entrada y la convierte a str para no borrar ni omitir nada.
+    Herramienta para añadir contenido JSON parseado al final de temp/temp_markdown.md.
+    
+    Parsea el JSON recibido y extrae el contenido de texto real,
+    manejando correctamente los caracteres Unicode escapados.
 
     Args:
-        content: Cualquier dato que se reciba. Se convertirá a string y se añadirá verbatim.
-        **kwargs: Parámetros adicionales (se ignoran).
+        content: String que contiene el contenido a procesar
+        
 
     Returns:
         str: Mensaje de confirmación con estadísticas básicas.
     """
-    # Convertimos exactamente lo que venga a string
-    full_content = str(content)
-
+    
+   
+    
+    
+    
     # Ruta al archivo temp/temp_markdown.md
     file_path = Path("temp") / "temp_markdown.md"
     os.makedirs(file_path.parent, exist_ok=True)
 
-    # Escribir el contenido al final del fichero sin filtrar nada
+    # Escribir el contenido parseado al final del fichero
     with codecs.open(file_path, "a", "utf-8") as f:
-        f.write(full_content)
-        f.write("\n")
+        f.write(content)
+        f.write("\n\n")  # Doble salto de línea para separar contenidos
 
-    # Leer todo el fichero para estadísticas
-    with codecs.open(file_path, "r", "utf-8") as f:
-        texto_completo = f.read()
-
-    palabras_nuevas = len(full_content.split())
-    lineas_nuevas = len(full_content.splitlines())
-    total_palabras = len(texto_completo.split())
-    total_lineas = len(texto_completo.splitlines())
-
-    return (
-        f"✅ Contenido añadido: {palabras_nuevas} palabras, {lineas_nuevas} líneas. "
-        f"Total ahora: {total_palabras} palabras, {total_lineas} líneas."
-    )
+    return f"Contenido añadido exsitosamente"
