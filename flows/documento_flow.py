@@ -6,7 +6,7 @@ import sys
 import shutil
 from crewai.flow.flow import Flow, start, listen
 from crewai import Crew, Process
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -16,6 +16,7 @@ try:
     from agents.escritor import crear_agente_escritor, crear_tarea_redaccion_archivo
     from tools.search_tools import _buscar_imagen_base
     from tools.pdf_tool import _generar_pdf_base
+    from utils.llm_provider import crear_llm_crewai
 except ImportError as e:
     print(f"[ERROR] No se pudieron importar las dependencias: {e}")
     sys.exit(1)
@@ -26,6 +27,7 @@ except ImportError as e:
 class DocumentoState(BaseModel):
     topic: str = ""
     modelo: str | None = None
+    llm_global: object = Field(default=None, exclude=True)  # Excluir de serialización
     estructura_completa: str = ""
     secciones_lista: list[str] = []
     total_secciones: int = 0
@@ -44,6 +46,11 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
         print(f"INICIANDO FLUJO DE DOCUMENTACIÓN COMPLETO")
         print(f"Tema: {self.state.topic}")
 
+        # 0. Crear instancia LLM global una sola vez
+        print("Creando instancia LLM global...")
+        self.state.llm_global = crear_llm_crewai(modelo_seleccionado=self.state.modelo)
+        print("LLM global creado correctamente.")
+
         # 1. Limpiar carpeta temp
         if os.path.exists("temp"):
             try:
@@ -58,7 +65,7 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
 
         # 3. Invocar agente estructurador para obtener la estructura completa
         print("\nPASO 1: ESTRUCTURADOR - Generando esquema del documento")
-        agente_estructurador = crear_agente_estructurador(self.state.modelo)
+        agente_estructurador = crear_agente_estructurador(self.state.modelo, llm_instance=self.state.llm_global)
         tarea_estructurar = crear_tarea_estructurar(self.state.topic, agente_estructurador)
 
         crew_estruct = Crew(
@@ -104,48 +111,73 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
 
     @listen(limpiar_y_crear_estructura_documento)
     def procesar_seccion(self, _):
-        """Paso 2: Iterar por cada sección, creando agentes frescos y ejecutando investigación + redacción."""
-        print(f"\nPASO 2: Procesando todas las secciones, una por una")
+        """
+        Paso 2 (CORREGIDO): Crear agentes una vez, generar todas las tareas y ejecutarlas en un solo Crew.
+        """
+        print(f"\nPASO 2: Preparando el Crew para procesar todas las secciones")
+
+        # 1. CREAR AGENTES UNA SOLA VEZ (FUERA DEL BUCLE)
+        # Estos agentes se reutilizarán para todas las tareas y usarán la misma instancia LLM.
+        agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo, llm_instance=self.state.llm_global)
+        agente_escritor = crear_agente_escritor(modelo=self.state.modelo, llm_instance=self.state.llm_global)
+
+        # 2. GENERAR TODAS LAS TAREAS DINÁMICAMENTE
+        # Creamos una lista para almacenar todas las tareas que se generarán.
+        all_tasks = []
+        
+        # Se usará para encadenar la redacción con la investigación de la misma sección
+        # y potencialmente con la redacción de la sección anterior para dar contexto.
+        last_task = None 
 
         for idx, seccion in enumerate(self.state.secciones_lista):
-            print(f"   Procesando sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
+            print(f"   Generando tareas para la sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
 
-            # 1) Crear un agente de búsqueda y otro de redacción frescos para esta sección
-            agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo)
-            agente_escritor = crear_agente_escritor(modelo=self.state.modelo)
-
-            # 2) Tarea de investigación
-            tarea_inv = crear_tarea_investigacion_automatica(
+            # Tarea de investigación para la sección actual
+            tarea_investigacion = crear_tarea_investigacion_automatica(
                 seccion,
                 self.state.topic,
                 agente_buscador
             )
-            tarea_inv.name = f"investigar_{idx}"
 
-            # 3) Tarea de redacción, que depende de la investigación previa
-            tarea_red = crear_tarea_redaccion_archivo(
+            # Tarea de redacción para la sección actual
+            # Depende de la tarea de investigación de ESTA sección.
+            tarea_redaccion = crear_tarea_redaccion_archivo(
                 agente_escritor,
                 seccion,
                 self.state.topic
             )
-            tarea_red.name = f"redactar_{idx}"
-            tarea_red.context = [tarea_inv]
+            tarea_redaccion.context = [tarea_investigacion]
 
-            # 4) Armar un Crew secuencial para esta sección
-            crew_seccion = Crew(
-                agents=[agente_buscador, agente_escritor],
-                tasks=[tarea_inv, tarea_red],
-                process=Process.sequential,
-                verbose=True
-            )
+            # Opcional: Para mejorar la coherencia, puedes hacer que la redacción
+            # de una sección dependa de la redacción de la anterior.
+            # if last_task:
+            #    tarea_redaccion.context.append(last_task)
 
-            # 5) Ejecutar investigación + redacción
-            resultado = crew_seccion.kickoff()
-            # NOTA: Se asume que el agente escritor, usando sus herramientas internas
-            #       (por ejemplo append_to_markdown), añade directamente el contenido
-            #       al archivo Markdown. No se hace escritura explícita aquí.
+            # Añadimos ambas tareas a nuestra lista global
+            all_tasks.append(tarea_investigacion)
+            all_tasks.append(tarea_redaccion)
+            
+            # Actualizamos la última tarea para la siguiente iteración
+            last_task = tarea_redaccion
 
-        # Una vez procesadas todas las secciones, avanzamos al siguiente paso
+        # 3. CREAR Y EJECUTAR UN ÚNICO CREW CON TODAS LAS TAREAS
+        # Este Crew contiene todos los agentes y la lista completa de tareas.
+        # CrewAI gestionará el orden de ejecución basado en las dependencias (context).
+        print("\nIniciando el Crew principal con todas las tareas generadas...")
+        full_crew = Crew(
+            agents=[agente_buscador, agente_escritor],
+            tasks=all_tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+
+        # Ejecutamos el Crew una sola vez.
+        resultado_final = full_crew.kickoff()
+        
+        print("\nTodas las secciones han sido procesadas por el Crew.")
+        print("Resultado final del Crew:", resultado_final)
+
+        # Avanzamos al siguiente paso del flujo
         return "todas_secciones_completadas"
 
     @listen(procesar_seccion)
@@ -256,6 +288,7 @@ def main():
 
     flow = DocumentoFlowCompleto()
     flow.state.topic = topic
+    flow.state.modelo = None  # Usar modelo por defecto, o especificar uno si se desea
 
     print("=== INICIANDO FLUJO DE DOCUMENTACIÓN CORREGIDO ===")
     flow.kickoff()

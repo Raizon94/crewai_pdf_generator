@@ -4,6 +4,8 @@
 import os
 import sys
 from crewai import Agent, Task
+# AÑADIR IMPORT PARA SERPER DEV TOOL
+from crewai_tools import SerperDevTool
 
 # Añadir el directorio padre al path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,34 +19,29 @@ except ImportError:
 
 # ==================== AGENTE BUSCADOR AUTOMÁTICO ====================
 
-def crear_agente_buscador_automatico(modelo: str = None) -> Agent:
+def crear_agente_buscador_automatico(modelo: str = None, llm_instance=None) -> Agent:
     """
     Crea agente buscador que usa automáticamente las @tools según su criterio (ReAct)
     """
     try:
-        llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        # Usar LLM pasado como parámetro o crear uno nuevo si no se proporciona
+        if llm_instance is not None:
+            llm = llm_instance
+        else:
+            llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        
+        # INICIALIZAR SERPER DEV TOOL (lee SERPER_API_KEY del .env automáticamente)
+        search_tool = SerperDevTool()
         
         agent = Agent(
             role="Investigador Digital Especializado",
             goal="Buscar información técnica rigurosa y relevante usando herramienta de búsqueda web",
             backstory="""Eres un investigador digital experto con acceso a herramientas de búsqueda web avanzadas.
             Tu especialidad es encontrar información técnica actualizada sobre diversos temas.
-            
-            Tienes acceso a herramientas de búsqueda que te permiten:
-            - Buscar información específica en internet
-            - Encontrar datos técnicos y estadísticas relevantes
-            - Obtener ejemplos prácticos y casos de uso
-            - Identificar tendencias actuales y perspectivas futuras
-
-            ATENCIÓN: NUNCA USAS LA HERRAMIENTA PASÁNDOLE ALGO QUE NO SEA UN STRING.
-            NUNCA LE PASES ALGO COMO: {'description': 'Transfor...iration', 'type': 'str'}
-            SOLO STRINGS PUROS, CON LA QUERY A BUSCAR.
-          
-            
-            Eres autónomo y decides cuándo y cómo usar la herramienta disponible según 
-            las necesidades de cada búsqueda específica.""",
+            """,
             llm=llm,
-            tools=[buscar_web],  # El agente decidirá automáticamente cuándo usarlas
+            # CAMBIAR tools=[buscar_web] POR LA TOOL OFICIAL:
+            tools=[search_tool],  # SerperDevTool en lugar de buscar_web
             verbose=True,
             allow_delegation=False,
             max_iter=3,
@@ -68,7 +65,8 @@ def crear_tarea_investigacion_automatica(seccion: str, topic: str, agent: Agent)
 
             OBJETIVO:
             Buscar información técnica, estadísticas y ejemplos sobre "{seccion}".
-            Investiga a fondo y recopila datos relevantes sobre este tema usando tu herramienta buscar_web para buscar en Internet.
+            # NOTA: El agente ahora usará SerperDevTool automáticamente para buscar en Internet
+            Investiga a fondo y recopila datos relevantes sobre este tema usando tu herramienta de búsqueda para buscar en Internet.
             """,
             expected_output=f"""
             Hechos y datos útiles sobre "{seccion}".

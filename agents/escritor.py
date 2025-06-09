@@ -16,12 +16,16 @@ except ImportError:
 
 # ==================== AGENTE ESCRITOR ====================
 
-def crear_agente_escritor(modelo: str = None) -> Agent:
+def crear_agente_escritor(modelo: str = None, llm_instance=None) -> Agent:
     """
     Crea y devuelve el agente especializado en redacción técnica
     """
     try:
-        llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        # Usar LLM pasado como parámetro o crear uno nuevo si no se proporciona
+        if llm_instance is not None:
+            llm = llm_instance
+        else:
+            llm = crear_llm_crewai(modelo_seleccionado=modelo)
         
         # Importar la tool de append
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
