@@ -1,7 +1,6 @@
 crewai
 crewai-tools
 crewai[llm]
-ollama
 streamlit
 requests
 markdown
