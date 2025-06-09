@@ -7,15 +7,15 @@ from pathlib import Path
 from crewai.tools import tool
 
 @tool("append_to_markdown")
-def append_to_markdown(content: str, **kwargs) -> str:
+def append_to_markdown(content: str) -> str:
     """
-    Herramienta para añadir cualquier cosa (sin filtrar ni parsear) al final de temp/temp_markdown.md.
+    Herramienta para añadir STRINGS EN MARKDOWN (sin filtrar ni parsear) al final de temp/temp_markdown.md.
 
-    Ahora acepta cualquier tipo de entrada y la convierte a str para no borrar ni omitir nada.
+    
 
     Args:
-        content: Cualquier dato que se reciba. Se convertirá a string y se añadirá verbatim.
-        **kwargs: Parámetros adicionales (se ignoran).
+        content: Cualquier dato que se reciba. Ha de ser STRING.
+    
 
     Returns:
         str: Mensaje de confirmación con estadísticas básicas.

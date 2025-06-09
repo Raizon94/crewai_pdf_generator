@@ -6,16 +6,32 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .llm_selector import seleccionar_llm
+from crewai import LLM
+def crear_llm_crewai(gemini_api_key=None):
+    """
+    Crea LLM optimizado para respuestas largas sin truncamiento usando Gemini API
+    """
+    import os
+    
+    # Si no se proporciona API key, usar la del .env
+    api_key = gemini_api_key if gemini_api_key else os.getenv('GEMINI_API_KEY')
+    
+    if not api_key:
+        raise ValueError("No se encontró GEMINI_API_KEY. Proporciona una API key o configúrala en el archivo .env")
+    
+    llm = LLM(
+        model=f"gemini/gemini-2.0-flash",
+        temperature=0.3,
+        api_key=api_key
+    )
+    return llm
 
-def crear_llm_crewai(modelo_seleccionado=None):
-    """
-    Crea LLM optimizado para respuestas largas sin truncamiento
-    """
+    #CÓDIGO LEGACY PORQUE USABA MODELOS LOCALES CON OLLAMA PERO FUNCIONABAN MUY MAL, MEJOR GEMINI CON MAX_RPM
     try:
         if modelo_seleccionado is None:
             modelo_seleccionado = seleccionar_llm()
         print(f"[INFO] Configurando LLM optimizado: {modelo_seleccionado}")
-        from crewai import LLM
+        
         
         # Detectar si estamos en Docker o local
         ollama_host = os.getenv('OLLAMA_HOST', 'localhost:11434')

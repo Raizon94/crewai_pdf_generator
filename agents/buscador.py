@@ -17,12 +17,12 @@ except ImportError:
 
 # ==================== AGENTE BUSCADOR AUTOMÁTICO ====================
 
-def crear_agente_buscador_automatico(modelo: str = None) -> Agent:
+def crear_agente_buscador_automatico(gemini_api_key: str = None) -> Agent:
     """
     Crea agente buscador que usa automáticamente las @tools según su criterio (ReAct)
     """
     try:
-        llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        llm = crear_llm_crewai(gemini_api_key=gemini_api_key)
         
         agent = Agent(
             role="Investigador Digital Especializado",

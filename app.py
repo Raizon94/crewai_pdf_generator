@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import random
 from flows.documento_flow import DocumentoFlowCompleto, DocumentoState
-from utils.llm_selector import obtener_modelos_disponibles_ollama
 
 st.set_page_config(page_title="Generador de PDF CrewAI", layout="centered")
 st.title("📄 Generador de PDF CrewAI")
@@ -54,20 +53,12 @@ Trabajo realizado por <b>William Atef Tadrous</b> y <b>Julián Cussianovich</b> 
 
 st.markdown("""
 <div style='background-color:#ffe6e6; padding:0.7em; border-radius:8px; text-align:center; font-size:1em; font-weight:bold; color:#b80000; border:2px solid #b80000;'>
-⚠️ <u>IMPORTANTE</u>: Este software ha sido desarrollado y optimizado específicamente para el modelo <b>gemma3:4b</b>. Solo se puede asegurar que funciona correctamente con este LLM.
+⚠️ <u>IMPORTANTE</u>: Este software ha sido desarrollado y optimizado específicamente para la <b>API de Gemini</b>. El máximo recomendado para la API gratuita de Gemini es de <b>10 a 13 max_rpm</b>.
 </div>
 """, unsafe_allow_html=True)
 
 # --------------------------------------------------------
-# Paso 1: Obtener la lista de modelos disponibles
-# --------------------------------------------------------
-modelos = obtener_modelos_disponibles_ollama()
-if not modelos:
-    st.error("No se encontraron modelos Ollama instalados. ¿Está corriendo el demonio y tienes modelos descargados?")
-    st.stop()
-
-# --------------------------------------------------------
-# Paso 2: Inicializar flags en session_state
+# Paso 1: Inicializar flags en session_state
 # --------------------------------------------------------
 #   - 'generando' indica si ya lanzamos el flujo de generación
 #   - 'pdf_ok' para saber si existe PDF listo para descarga
@@ -80,20 +71,28 @@ if "error_generacion" not in st.session_state:
     st.session_state["error_generacion"] = ""
 
 # --------------------------------------------------------
-# Paso 3: Mostrar formulario para seleccionar modelo y tópico
+# Paso 2: Mostrar formulario para configuración y tópico
 # --------------------------------------------------------
 with st.form(key="form_pdf"):
-    # Si nunca se seleccionó modelo, inicializamos con el primero
-    if "modelo_llm" not in st.session_state:
-        st.session_state["modelo_llm"] = modelos[0]
-
-    modelo = st.selectbox(
-        "Selecciona el modelo LLM",
-        modelos,
-        index=modelos.index(st.session_state["modelo_llm"]),
-        key="modelo_llm",
-        help="Elige el modelo Ollama que tienes descargado."
+    # Campo para la API key de Gemini
+    gemini_api_key = st.text_input(
+        "Gemini API Key (opcional - usa .env si está vacío)",
+        value=st.session_state.get("gemini_api_key", ""),
+        key="gemini_api_key",
+        type="password",
+        help="Introduce tu API key de Gemini. Si está vacío, se usará la del archivo .env"
     )
+    
+    # Campo para max_rpm
+    max_rpm = st.number_input(
+        "Max RPM (Requests per Minute)",
+        min_value=1,
+        max_value=60,
+        value=st.session_state.get("max_rpm", 10),
+        key="max_rpm",
+        help="Máximo de requests por minuto. Para API gratuita de Gemini se recomienda máximo 10."
+    )
+    
     topic = st.text_input(
         "Tópico del documento",
         value=st.session_state.get("topic_input", "Arquitectura Transformer en los LLM"),
@@ -135,19 +134,20 @@ if st.session_state["generando"]:
     mensaje = random.choice(frases)
     with st.spinner(mensaje):
         # ----------------------------------------------------------------------------------
-        # - Obtenemos el modelo elegido y el tópico final desde session_state (ya actualizados)
+        # - Obtenemos los parámetros finales desde session_state (ya actualizados)
         # - Ejecutamos el flujo de generación de PDF
         # ----------------------------------------------------------------------------------
-        modelo_llm = st.session_state["modelo_llm"]
+        gemini_api_key_actual = st.session_state["gemini_api_key"]
+        max_rpm_actual = st.session_state["max_rpm"]
         topic_actual = st.session_state["topic_input"]
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
 
         try:
             flow = DocumentoFlowCompleto(
-                state=DocumentoState(topic=topic_actual, modelo=modelo_llm)
+                state=DocumentoState(topic=topic_actual, gemini_api_key=gemini_api_key_actual, max_rpm=max_rpm_actual)
             )
-            flow.kickoff(inputs={"topic": topic_actual, "modelo": modelo_llm})
+            flow.kickoff(inputs={"topic": topic_actual, "gemini_api_key": gemini_api_key_actual, "max_rpm": max_rpm_actual})
             # Si no arroja excepción, asumimos que el PDF se creó
             st.session_state["pdf_ok"] = True
         except Exception as e:
@@ -179,15 +179,6 @@ if st.session_state["generando"]:
     else:
         # Si no hay PDF y tampoco error explícito, mensaje genérico
         st.error("❌ Ocurrió un problema desconocido al generar el PDF.")
-
-# --------------------------------------------------------
-# Paso 6: Mostrar info extra del modelo si el usuario marca el checkbox
-# --------------------------------------------------------
-campos_disabled = st.session_state["generando"]
-mostrar_info = st.checkbox("Mostrar información del modelo LLM", disabled=campos_disabled, key="mostrar_info_modelo")
-if mostrar_info:
-    st.write(f"Modelo actual: {st.session_state.get('modelo_llm', 'Ninguno')}")
-    st.write("Puedes cambiar los modelos disponibles descargando más modelos con Ollama.")
 
 
 # --------------------------------------------------------

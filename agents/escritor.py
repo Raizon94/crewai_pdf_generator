@@ -16,12 +16,12 @@ except ImportError:
 
 # ==================== AGENTE ESCRITOR ====================
 
-def crear_agente_escritor(modelo: str = None) -> Agent:
+def crear_agente_escritor(gemini_api_key: str = None) -> Agent:
     """
     Crea y devuelve el agente especializado en redacción técnica
     """
     try:
-        llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        llm = crear_llm_crewai(gemini_api_key=gemini_api_key)
         
         # Importar la tool de append
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

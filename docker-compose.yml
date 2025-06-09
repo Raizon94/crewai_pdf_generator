@@ -7,7 +7,7 @@ services:
       - "8501:8501"
     environment:
       - SERPER_API_KEY=${SERPER_API_KEY}
-      - OLLAMA_HOST=host.docker.internal:11434
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./output:/app/output
       - ./temp:/app/temp
@@ -18,28 +18,7 @@ services:
       - ./flows:/app/flows
       - ./utils:/app/utils
       - ./app.py:/app/app.py
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     restart: unless-stopped
-    depends_on:
-      - ollama-check
-    networks:
-      - crewai-network
-
-  # Servicio para verificar que Ollama esté disponible
-  ollama-check:
-    image: curlimages/curl:latest
-    command: >
-      sh -c "
-        echo 'Verificando conexión con Ollama...'
-        until curl -f http://host.docker.internal:11434/api/tags; do
-          echo 'Esperando a que Ollama esté disponible...'
-          sleep 5
-        done
-        echo 'Ollama está disponible!'
-      "
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - crewai-network
 

@@ -16,12 +16,12 @@ except ImportError:
 
 # ==================== AGENTE ESTRUCTURADOR ====================
 
-def crear_agente_estructurador(modelo: str = None) -> Agent:
+def crear_agente_estructurador(gemini_api_key: str = None) -> Agent:
     """
     Crea y devuelve el agente especializado en estructurar documentos
     """
     try:
-        llm = crear_llm_crewai(modelo_seleccionado=modelo)
+        llm = crear_llm_crewai(gemini_api_key=gemini_api_key)
         
         agent = Agent(
             role="Arquitecto de Documentos Técnicos",

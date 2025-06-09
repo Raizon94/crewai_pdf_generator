@@ -1,31 +1,37 @@
 # 📄 CrewAI PDF Generator
 
-Aplicación web construida con **Streamlit** que utiliza **CrewAI** y modelos de lenguaje locales (a través de **Ollama**) para generar documentos PDF detallados sobre cualquier tema proporcionado por el usuario.
+Aplicación web construida con **Streamlit** que utiliza **CrewAI** y la **API de Gemini** para generar documentos PDF detallados sobre cualquier tema proporcionado por el usuario.
 
 **Desarrollado por:** William Atef Tadrous y Julián Cussianovich  
 **Asignatura:** AIN - Grupo 3CO11  
-**Optimizado para:** gemma3:4b
+**Optimizado para:** API de Gemini (gemini-2.0-flash)
 
 ## 🚀 Inicio Rápido con Docker
 
 ### Prerrequisitos
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado
-- [Ollama](https://ollama.com/) ejecutándose en tu máquina host
+- API keys gratuitas de Google (Gemini y Serper)
 
-### 1. Configurar Ollama (en tu máquina, no en Docker)
+### 1. Obtener API Keys gratuitas
+
+#### Gemini API (Google AI)
 ```bash
-# Instalar Ollama desde https://ollama.com/
-# Ejecutar el servicio
-ollama serve
+# Visita: https://ai.google.dev/
+# Crea una cuenta gratuita
+# Genera tu API key de Gemini
+```
 
-# Descargar modelo recomendado
-ollama pull gemma3:4b
+#### Serper API (Búsquedas web)
+```bash
+# Visita: https://serper.dev/
+# Crea una cuenta gratuita
+# Obtén tu API key para búsquedas
 ```
 
 ### 2. Configurar el proyecto
 ```bash
 # Clonar el repositorio
-git clone *link a nuestro repo*
+git clone *link a mi repo*
 cd crewai_pdf_generator
 
 # Crear archivo de configuración
@@ -35,9 +41,11 @@ cp .env.example .env
 ### 3. Configurar variables de entorno
 Edita el archivo `.env` con tus credenciales:
 ```bash
-# Obtener API key gratuita en https://serper.dev/
+# API Key para búsquedas web (gratuita en https://serper.dev/)
 SERPER_API_KEY=tu_clave_serper_aqui
-OLLAMA_HOST=localhost:11434
+
+# API Key para Gemini (gratuita en https://ai.google.dev/)
+GEMINI_API_KEY=tu_clave_gemini_aqui
 ```
 
 ### 4. Ejecutar con Docker
@@ -65,28 +73,39 @@ docker compose up
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Streamlit     │    │   CrewAI        │    │   Ollama        │
-│   (Docker)      │◄──►│   (Docker)      │◄──►│   (Host)        │
-│   Puerto 8501   │    │   Agentes AI    │    │   Puerto 11434  │
+│   Streamlit     │    │   CrewAI        │    │   Gemini API    │
+│   (Docker)      │◄──►│   (Docker)      │◄──►│   (Cloud)       │
+│   Puerto 8501   │    │   Agentes AI    │    │   Google AI     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 **Ventajas de esta configuración:**
-- ✅ **Multiplataforma**: Funciona en Windows, macOS y Linux
-- ✅ **Rendimiento**: Ollama ejecutándose nativamente para mejor uso de GPU
-- ✅ **Consistencia**: Aplicación containerizada 
-- ✅ **Persistencia**: Modelos y archivos se mantienen entre reinicios
-3. Abre tu navegador en la URL que indique Streamlit (usualmente `http://localhost:8501`).
+- ✅ **Multiplataforma**: Funciona en Windows, macOS y Linux sin dependencias locales
+- ✅ **Rendimiento**: API de Gemini ofrece respuestas rápidas y consistentes
+- ✅ **Simplicidad**: No requiere instalación de modelos locales
+- ✅ **Escalabilidad**: Manejo automático de rate limiting y optimización de requests
+- ✅ **Estabilidad**: Modelos en la nube vs. problemas de modelos locales pequeños
 
 ## ✨ Funcionalidades Principales
 
 - **🌐 Interfaz Web Intuitiva**: Construida con Streamlit y completamente containerizada
 - **🤖 Múltiples Agentes IA**: CrewAI Flows orquesta agentes especializados con control de flujo robusto
-- **🎯 Selección de Modelos**: Compatible con múltiples modelos LLM a través de Ollama
+- **🎯 API Key Configurable**: Usa tu propia API key de Gemini o la del archivo .env
+- **⚡ Rate Limiting Inteligente**: Control de max_rpm configurable (recomendado: 10 para API gratuita)
 - **📝 Generación Automatizada**: Investigación, estructuración y redacción completamente automática
 - **🔄 Flujo Secuencial Garantizado**: Control de estados y transiciones automáticas entre fases
 - **📋 Exportación PDF**: Documentos profesionales con imágenes y formato avanzado
-- **🔧 Optimizado para gemma3:4b**: Configuración específica para mejores resultados
+- **🔧 Optimizado para Gemini**: Configuración específica para mejores resultados con modelos en la nube
+
+## 💡 ¿Por qué Gemini API en lugar de modelos locales?
+
+Después de extensas pruebas, hemos migrado de modelos locales (Ollama) a la API de Gemini por las siguientes razones:
+
+- **🎯 Estabilidad**: Los modelos locales pequeños (como gemma3:4b) son difíciles de hacer estables para tareas complejas
+- **📊 Consistencia**: Gemini ofrece respuestas más consistentes y de mayor calidad
+- **⚡ Velocidad**: Menor latencia que modelos locales en hardware limitado
+- **🔧 Simplicidad**: No requiere configuración compleja de GPU/CPU ni descargas de modelos
+- **💰 Costo**: La API gratuita de Gemini es suficiente para uso normal (10 requests/minuto)
 
 ## 🛠️ Comandos Útiles
 
@@ -104,38 +123,38 @@ docker compose down && docker compose build --no-cache && docker compose up
 
 ### Diagnóstico
 ```bash
-# Verificar Ollama desde Docker
-docker run --rm curlimages/curl curl -f http://host.docker.internal:11434/api/tags
-
 # Estado de contenedores
 docker compose ps
 
 # Acceder al contenedor
 docker compose exec crewai-app bash
+
+# Verificar variables de entorno
+docker compose exec crewai-app env | grep -E "(GEMINI|SERPER)"
 ```
 
 ## 🚨 Solución de Problemas
 
-### "No se encontraron modelos Ollama"
+### "No se encontró GEMINI_API_KEY"
+1. Verifica que tu archivo `.env` contiene la API key:
 ```bash
-ollama serve
-ollama list
-ollama pull gemma3:4b
+cat .env | grep GEMINI_API_KEY
 ```
+2. O introduce la API key directamente en la interfaz web
 
-### "Connection refused to localhost:11434"
-```bash
-# Windows/Mac: verificar conectividad
-ping host.docker.internal
+### "Rate limit exceeded" o errores de API
+- Reduce el valor de `max_rpm` en la interfaz (recomendado: 10 o menos)
+- Verifica que tu API key de Gemini sea válida
+- Espera unos minutos antes de reintentar
 
-# Linux: cambiar en .env
-OLLAMA_HOST=172.17.0.1:11434
-```
+### "Error de búsqueda web"
+- Verifica tu `SERPER_API_KEY` en el archivo `.env`
+- Comprueba que tienes conexión a internet
 
-### Aplicación muy lenta
-- Verificar memoria RAM disponible (recomendado mínimo 8GB)
-- Cerrar aplicaciones que consuman recursos
-- Usar `gemma3:4b` que está optimizado para este proyecto
+### Aplicación muy lenta o errores de timeout
+- Verificar conexión a internet estable
+- Reducir el valor de `max_rpm` (recomendado: 5-10)
+- Verificar memoria RAM disponible (recomendado mínimo 4GB)
 
 ## 📚 Documentación Detallada
 
@@ -149,7 +168,7 @@ Si prefieres ejecutar sin Docker:
 pip install -r requirements.txt
 streamlit run app.py
 ```
-*Nota: Requiere Python 3.9+, Ollama local y configuración manual de dependencias del sistema.*
+*Nota: Requiere Python 3.9+ y configuración manual de dependencias del sistema.*
 
 ## 🏗️ Tecnologías Utilizadas
 
@@ -157,7 +176,7 @@ streamlit run app.py
 - **🐍 Python 3.11**: Lenguaje base de la aplicación
 - **⚡ Streamlit**: Framework para la interfaz web interactiva
 - **🤖 CrewAI Flows**: Orquestación avanzada de agentes con control de flujo robusto
-- **🦙 Ollama**: Ejecución local optimizada de LLMs
+- **🔮 Gemini API**: Modelo de lenguaje avanzado de Google AI
 - **🔗 LangChain**: Integración de cadenas de LLM (usado por CrewAI)
 - **📄 WeasyPrint**: Generación profesional de PDFs
 - **🔍 Serper API**: Búsquedas web inteligentes
@@ -192,8 +211,7 @@ streamlit run app.py
 │
 ├── ⚙️ Utilities (utils/)
 │   ├── fix_encoding.py       # Corrección de codificación
-│   ├── llm_provider.py       # Configuración de LLM
-│   └── llm_selector.py       # Detección de modelos Ollama
+│   └── llm_provider.py       # Configuración de Gemini API
 │
 └── 📂 Output Directories
     ├── output/               # PDFs generados (persistente)
@@ -206,19 +224,19 @@ streamlit run app.py
 - **Rol:** Arquitecto de Documentos Técnicos
 - **Función:** Crea estructura lógica y profesional en Markdown
 - **Especialidad:** Organización jerárquica del contenido
-- **Mejora en Flows:** Se ejecuta una sola vez al inicio del flujo
+- **LLM:** Utiliza Gemini API para generar estructuras coherentes
 
 ### 🔍 Agente Buscador (`buscador.py`)
 - **Investigador Digital:** Búsqueda de información técnica con `buscar_web`
 - **Especialista en Imágenes:** Descarga imágenes relevantes con `buscar_y_descargar_imagen`
 - **Especialidad:** Investigación web inteligente y curación de contenido visual
-- **Mejora en Flows:** Se crea un agente fresco para cada sección, evitando contaminación de contexto
+- **LLM:** Utiliza Gemini API para análisis contextual de resultados de búsqueda
 
 ### ✍️ Agente Escritor (`escritor.py`)
 - **Rol:** Redactor Técnico Especializado en Español
 - **Función:** Redacción profesional y añadir contenido con `append_to_markdown`
 - **Especialidad:** Escritura técnica de alta calidad en español
-- **Mejora en Flows:** Se crea un agente fresco para cada sección, garantizando contenido independiente
+- **LLM:** Utiliza Gemini API para generar contenido coherente y bien estructurado
 
 ## 🔄 Flujo de Trabajo CrewAI Flows
 
@@ -249,7 +267,8 @@ El estado del flujo se gestiona a través de una clase `DocumentoState` que here
 ```python
 class DocumentoState(BaseModel):
     topic: str = ""                    # Tema del documento
-    modelo: str | None = None          # Modelo LLM seleccionado  
+    gemini_api_key: str = ""          # API key de Gemini (opcional)
+    max_rpm: int = 10                 # Rate limiting configurable
     estructura_completa: str = ""      # Estructura generada en Markdown
     secciones_lista: list[str] = []    # Lista de secciones extraídas
     total_secciones: int = 0           # Contador de secciones
@@ -261,11 +280,14 @@ class DocumentoState(BaseModel):
 Esta gestión centralizada del estado permite:
 - ✅ **Persistencia entre pasos**: Los datos se mantienen durante todo el flujo
 - ✅ **Validación automática**: Pydantic valida tipos y formatos
+- ✅ **Rate Limiting Inteligente**: Control configurable de requests por minuto
+- ✅ **API Key Flexible**: Usa API key personalizada o del archivo .env
 - ✅ **Trazabilidad**: Cada paso puede acceder y modificar el estado
 - ✅ **Debugging mejorado**: Fácil inspección del estado en cualquier momento
 
-### Ventajas de CrewAI Flows
+### Ventajas de CrewAI Flows con Gemini API
 - ✅ **Control de flujo robusto**: Manejo de estados y transiciones automáticas
+- ✅ **Rate limiting inteligente**: Evita superar límites de la API gratuita
 - ✅ **Ejecución secuencial garantizada**: Cada paso se completa antes del siguiente
 - ✅ **Gestión de errores mejorada**: Mejor manejo de excepciones entre pasos
 - ✅ **Escalabilidad**: Fácil adición de nuevos pasos al flujo
@@ -287,18 +309,17 @@ Esta gestión centralizada del estado permite:
 | Utilidad | Propósito | Archivo |
 |----------|-----------|---------|
 | `fix_markdown_encoding()` | Corrige problemas de codificación | `utils/fix_encoding.py` |
-| `crear_llm_crewai()` | Configura LLM optimizado para Docker/local | `utils/llm_provider.py` |
-| `obtener_modelos_disponibles_ollama()` | Lista modelos instalados | `utils/llm_selector.py` |
-| `seleccionar_llm()` | Auto-selecciona mejor modelo disponible | `utils/llm_selector.py` |
+| `crear_llm_crewai()` | Configura Gemini API con rate limiting | `utils/llm_provider.py` |
 
 ### Nuevas Características de la Arquitectura
 
 - **🔄 CrewAI Flows**: Utiliza la nueva arquitectura de flows para un control de flujo más robusto
 - **📊 Estado Centralizado**: `DocumentoState` gestiona todo el estado del flujo con BaseModel de Pydantic
 - **🔗 Decoradores de Flow**: `@start()` y `@listen()` para definir transiciones entre pasos
-- **🎯 Agentes Frescos**: Cada sección crea agentes nuevos para evitar contaminación de estado
+- **🎯 API Key Configurable**: Flexibilidad para usar API keys personalizadas o del .env
+- **⚡ Rate Limiting**: Control inteligente para evitar superar límites de API gratuita
 - **📈 Logging Mejorado**: Seguimiento detallado de cada fase del proceso
 
 ---
 
-**¡Listo para generar PDFs con IA usando CrewAI Flows! 🚀**
+**¡Listo para generar PDFs con IA usando CrewAI Flows y Gemini API! 🚀**

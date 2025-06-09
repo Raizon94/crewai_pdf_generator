@@ -25,7 +25,8 @@ except ImportError as e:
 
 class DocumentoState(BaseModel):
     topic: str = ""
-    modelo: str | None = None
+    gemini_api_key: str = ""
+    max_rpm: int = 10
     estructura_completa: str = ""
     secciones_lista: list[str] = []
     total_secciones: int = 0
@@ -58,14 +59,15 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
 
         # 3. Invocar agente estructurador para obtener la estructura completa
         print("\nPASO 1: ESTRUCTURADOR - Generando esquema del documento")
-        agente_estructurador = crear_agente_estructurador(self.state.modelo)
+        agente_estructurador = crear_agente_estructurador(gemini_api_key=self.state.gemini_api_key)
         tarea_estructurar = crear_tarea_estructurar(self.state.topic, agente_estructurador)
 
         crew_estruct = Crew(
             agents=[agente_estructurador],
             tasks=[tarea_estructurar],
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            max_rpm=self.state.max_rpm
         )
         resultado = crew_estruct.kickoff(inputs={"topic": self.state.topic})
         self.state.estructura_completa = resultado.raw if hasattr(resultado, "raw") else str(resultado)
@@ -104,48 +106,45 @@ class DocumentoFlowCompleto(Flow[DocumentoState]):
 
     @listen(limpiar_y_crear_estructura_documento)
     def procesar_seccion(self, _):
-        """Paso 2: Iterar por cada sección, creando agentes frescos y ejecutando investigación + redacción."""
-        print(f"\nPASO 2: Procesando todas las secciones, una por una")
+        """
+        Paso 2: Crear agentes una vez, generar todas las tareas y ejecutarlas en un solo Crew.
+        """
+        print(f"\nPASO 2: Preparando el Crew para procesar todas las secciones")
 
+        # 1. CREAR AGENTES UNA SOLA VEZ (FUERA DEL BUCLE)
+        agente_buscador = crear_agente_buscador_automatico(gemini_api_key=self.state.gemini_api_key)
+        agente_escritor = crear_agente_escritor(gemini_api_key=self.state.gemini_api_key)
+
+        # 2. GENERAR UNA LISTA CON TODAS LAS TAREAS
+        todas_las_tareas = []
+        print("   Generando la lista completa de tareas...")
         for idx, seccion in enumerate(self.state.secciones_lista):
-            print(f"   Procesando sección {idx + 1}/{self.state.total_secciones}: '{seccion}'")
-
-            # 1) Crear un agente de búsqueda y otro de redacción frescos para esta sección
-            agente_buscador = crear_agente_buscador_automatico(modelo=self.state.modelo)
-            agente_escritor = crear_agente_escritor(modelo=self.state.modelo)
-
-            # 2) Tarea de investigación
-            tarea_inv = crear_tarea_investigacion_automatica(
-                seccion,
-                self.state.topic,
-                agente_buscador
+            # Tarea de investigación para la sección actual
+            tarea_investigacion = crear_tarea_investigacion_automatica(
+                seccion, self.state.topic, agente_buscador
             )
-            tarea_inv.name = f"investigar_{idx}"
-
-            # 3) Tarea de redacción, que depende de la investigación previa
-            tarea_red = crear_tarea_redaccion_archivo(
-                agente_escritor,
-                seccion,
-                self.state.topic
+            # Tarea de redacción, que depende de la investigación anterior
+            tarea_redaccion = crear_tarea_redaccion_archivo(
+                agente_escritor, seccion, self.state.topic
             )
-            tarea_red.name = f"redactar_{idx}"
-            tarea_red.context = [tarea_inv]
+            tarea_redaccion.context = [tarea_investigacion]
 
-            # 4) Armar un Crew secuencial para esta sección
-            crew_seccion = Crew(
-                agents=[agente_buscador, agente_escritor],
-                tasks=[tarea_inv, tarea_red],
-                process=Process.sequential,
-                verbose=True
-            )
+            todas_las_tareas.extend([tarea_investigacion, tarea_redaccion])
 
-            # 5) Ejecutar investigación + redacción
-            resultado = crew_seccion.kickoff()
-            # NOTA: Se asume que el agente escritor, usando sus herramientas internas
-            #       (por ejemplo append_to_markdown), añade directamente el contenido
-            #       al archivo Markdown. No se hace escritura explícita aquí.
+        # 3. CREAR Y EJECUTAR UN ÚNICO CREW CON TODAS LAS TAREAS
+        print("\nIniciando el Crew principal con todas las tareas generadas...")
+        crew_completo = Crew(
+            agents=[agente_buscador, agente_escritor],
+            tasks=todas_las_tareas,
+            process=Process.sequential,
+            verbose=True,
+            max_rpm=self.state.max_rpm  
+        )
 
-        # Una vez procesadas todas las secciones, avanzamos al siguiente paso
+        # Ejecutamos el Crew una sola vez con la lista completa de tareas
+        resultado_final = crew_completo.kickoff()
+        
+        print("\nTodas las secciones han sido procesadas por el Crew.")
         return "todas_secciones_completadas"
 
     @listen(procesar_seccion)
